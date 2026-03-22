@@ -1,13 +1,22 @@
+// Storage polyfill for non-Claude environments
+if (!window.storage) {
+  window.storage = {
+    get: async (k) => { try { const v = localStorage.getItem(k); return v ? { key: k, value: v } : null; } catch { return null; } },
+    set: async (k, v) => { try { localStorage.setItem(k, v); return { key: k, value: v }; } catch { return null; } },
+    delete: async (k) => { try { localStorage.removeItem(k); return { key: k, deleted: true }; } catch { return null; } },
+    list: async (prefix) => { try { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys }; } catch { return { keys: [] }; } }
+  };
+}
 import { useState, useEffect, useCallback } from "react";
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // CONSTANTS
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const DAYS_SHORT   = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_DATES    = ["Mar 9","Mar 10","Mar 11","Mar 12","Mar 13","Mar 14","Mar 15"];
 const DAY_FULL     = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
-// Dynamic today â find which slot in the week strip matches today
+// Dynamic today Ã¢ÂÂ find which slot in the week strip matches today
 const _now = new Date();
 const _todayISO = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
 const _weekISOs = ["2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15"];
@@ -31,32 +40,32 @@ const STATUS_META = {
   DONE:      { color:"#374151", bg:"#11182799" },
 };
 const BID_STATUS = {
-  NEW:       { color:"#F59E0B", bg:"#1c100388", label:"New",       icon:"ð" },
-  REVIEWING: { color:"#3B82F6", bg:"#1e3a5f88", label:"Reviewing", icon:"ð" },
-  BIDDING:   { color:"#A78BFA", bg:"#1e1b4b88", label:"Bidding",   icon:"âï¸" },
-  SUBMITTED: { color:"#10B981", bg:"#052e1688", label:"Submitted", icon:"ð¤" },
-  WON:       { color:"#10B981", bg:"#052e1699", label:"Won ð",    icon:"ð" },
-  LOST:      { color:"#374151", bg:"#11182799", label:"Lost",       icon:"â" },
-  DECLINED:  { color:"#EF4444", bg:"#45090a88", label:"Declined",  icon:"ð«" },
+  NEW:       { color:"#F59E0B", bg:"#1c100388", label:"New",       icon:"Ã°ÂÂÂ" },
+  REVIEWING: { color:"#3B82F6", bg:"#1e3a5f88", label:"Reviewing", icon:"Ã°ÂÂÂ" },
+  BIDDING:   { color:"#A78BFA", bg:"#1e1b4b88", label:"Bidding",   icon:"Ã¢ÂÂÃ¯Â¸Â" },
+  SUBMITTED: { color:"#10B981", bg:"#052e1688", label:"Submitted", icon:"Ã°ÂÂÂ¤" },
+  WON:       { color:"#10B981", bg:"#052e1699", label:"Won Ã°ÂÂÂ",    icon:"Ã°ÂÂÂ" },
+  LOST:      { color:"#374151", bg:"#11182799", label:"Lost",       icon:"Ã¢ÂÂ" },
+  DECLINED:  { color:"#EF4444", bg:"#45090a88", label:"Declined",  icon:"Ã°ÂÂÂ«" },
 };
-const PEOPLE = ["David","Hannah","Annie","Britney","Elma","Claude","Roger","Hugo","Assign â"];
+const PEOPLE = ["David","Hannah","Annie","Britney","Elma","Claude","Roger","Hugo","Assign Ã¢ÂÂ"];
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-// SEED DATA â 3 REAL BIDS FROM INBOX
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// SEED DATA Ã¢ÂÂ 3 REAL BIDS FROM INBOX
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const SEED_TASKS = [
-  { id:1,  icon:"ð·", title:"Director of Construction",   subtitle:"Shortlist resumes â begin interviews",            domain:"Business", priority:1,  status:"ACTIVE",    owner:"David",    deadline:"ASAP",      day:"MON", progress:10, nextAction:"Send resumes to Claude for scoring & ranking",    dateAdded:"2026-03-09" },
-  { id:2,  icon:"ðï¸", title:"Soletta Project Setup",      subtitle:"File structure, job account, materials, trailer", domain:"Business", priority:2,  status:"ACTIVE",    owner:"Assign â", deadline:"This Week", day:"MON", progress:20, nextAction:"Name the owner for job account + materials â NOW", dateAdded:"2026-03-09" },
-  { id:11, icon:"ð", title:"FrankCrum PEO â Due Mar 12", subtitle:"Loss runs + enrollment must close by Mar 12",     domain:"Business", priority:1,  status:"ACTIVE",    owner:"David",    deadline:"Mar 12",    day:"TUE", progress:60, nextAction:"Confirm loss runs sent to Tami Collinsworth",      dateAdded:"2026-03-09" },
-  { id:5,  icon:"ð¡", title:"Land + Construction Loan",   subtitle:"Requirements, timeline, Q2 possession plan",      domain:"Personal", priority:5,  status:"ACTIVE",    owner:"David",    deadline:"EOQ2",      day:"TUE", progress:5,  nextAction:"Tell Claude: what county? One home or compound?", dateAdded:"2026-03-09" },
-  { id:3,  icon:"ð", title:"2026 Coastal Budget",         subtitle:"Revenue targets, overhead, margin analysis",      domain:"Business", priority:3,  status:"QUEUED",    owner:"David",    deadline:"This Week", day:"WED", progress:0,  nextAction:"Block 90 min Wednesday to build the framework",   dateAdded:"2026-03-09" },
-  { id:7,  icon:"â¾", title:"Reagan's Softball",           subtitle:"Next game â is David making it?",                 domain:"Family",   priority:7,  status:"RECURRING", owner:"David",    deadline:"Weekly",    day:"WED", progress:0,  nextAction:"Confirm next game time and block calendar now",   dateAdded:"2026-03-09" },
-  { id:10, icon:"âï¸", title:"Davis Reed / K-1 Dispute",   subtitle:"Book corrections, amended returns 2022â2024",     domain:"Business", priority:10, status:"WAITING",   owner:"Britney",  deadline:"ASAP",      day:"THU", progress:35, nextAction:"Confirm Britney finished reclassifications",      dateAdded:"2026-03-09" },
-  { id:12, icon:"ð»", title:"BuilderTrend vs Jobtread",    subtitle:"Decision deadline end of week",                   domain:"Business", priority:3,  status:"ACTIVE",    owner:"David",    deadline:"Mar 13",    day:"FRI", progress:0,  nextAction:"Stop deferring â make the call by Friday",        dateAdded:"2026-03-09" },
-  { id:8,  icon:"ð", title:"Daily Steps",                 subtitle:"3,000 avg â 10,000 goal",                         domain:"Health",   priority:8,  status:"RECURRING", owner:"David",    deadline:"Daily",     day:"MON", progress:30, nextAction:"Log yesterday's steps right now",                 dateAdded:"2026-03-09" },
-  { id:4,  icon:"ð§¾", title:"Receipt Capture App",         subtitle:"Forward receipts â auto-route to accounting",    domain:"Business", priority:4,  status:"QUEUED",    owner:"Claude",   deadline:"Next Week", day:null,  progress:0,  nextAction:"Confirm priority â this week or next?",           dateAdded:"2026-03-09" },
-  { id:6,  icon:"ðï¸", title:"Family Compound Plan",        subtitle:"In-laws + Britney â legal, financial, emotional", domain:"Personal", priority:6,  status:"QUEUED",    owner:"Britney",  deadline:"EOY",       day:null,  progress:0,  nextAction:"Schedule a dedicated brainstorm â not this week", dateAdded:"2026-03-09" },
-  { id:9,  icon:"ð", title:"Reagan's 5th Birthday",       subtitle:"April 26 â planning is overdue",                  domain:"Family",   priority:9,  status:"QUEUED",    owner:"Britney",  deadline:"Apr 26",    day:null,  progress:0,  nextAction:"Party at home or venue? Text Britney today.",     dateAdded:"2026-03-09" },
+  { id:1,  icon:"Ã°ÂÂÂ·", title:"Director of Construction",   subtitle:"Shortlist resumes Ã¢ÂÂ begin interviews",            domain:"Business", priority:1,  status:"ACTIVE",    owner:"David",    deadline:"ASAP",      day:"MON", progress:10, nextAction:"Send resumes to Claude for scoring & ranking",    dateAdded:"2026-03-09" },
+  { id:2,  icon:"Ã°ÂÂÂÃ¯Â¸Â", title:"Soletta Project Setup",      subtitle:"File structure, job account, materials, trailer", domain:"Business", priority:2,  status:"ACTIVE",    owner:"Assign Ã¢ÂÂ", deadline:"This Week", day:"MON", progress:20, nextAction:"Name the owner for job account + materials Ã¢ÂÂ NOW", dateAdded:"2026-03-09" },
+  { id:11, icon:"Ã°ÂÂÂ", title:"FrankCrum PEO Ã¢ÂÂ Due Mar 12", subtitle:"Loss runs + enrollment must close by Mar 12",     domain:"Business", priority:1,  status:"ACTIVE",    owner:"David",    deadline:"Mar 12",    day:"TUE", progress:60, nextAction:"Confirm loss runs sent to Tami Collinsworth",      dateAdded:"2026-03-09" },
+  { id:5,  icon:"Ã°ÂÂÂ¡", title:"Land + Construction Loan",   subtitle:"Requirements, timeline, Q2 possession plan",      domain:"Personal", priority:5,  status:"ACTIVE",    owner:"David",    deadline:"EOQ2",      day:"TUE", progress:5,  nextAction:"Tell Claude: what county? One home or compound?", dateAdded:"2026-03-09" },
+  { id:3,  icon:"Ã°ÂÂÂ", title:"2026 Coastal Budget",         subtitle:"Revenue targets, overhead, margin analysis",      domain:"Business", priority:3,  status:"QUEUED",    owner:"David",    deadline:"This Week", day:"WED", progress:0,  nextAction:"Block 90 min Wednesday to build the framework",   dateAdded:"2026-03-09" },
+  { id:7,  icon:"Ã¢ÂÂ¾", title:"Reagan's Softball",           subtitle:"Next game Ã¢ÂÂ is David making it?",                 domain:"Family",   priority:7,  status:"RECURRING", owner:"David",    deadline:"Weekly",    day:"WED", progress:0,  nextAction:"Confirm next game time and block calendar now",   dateAdded:"2026-03-09" },
+  { id:10, icon:"Ã¢ÂÂÃ¯Â¸Â", title:"Davis Reed / K-1 Dispute",   subtitle:"Book corrections, amended returns 2022Ã¢ÂÂ2024",     domain:"Business", priority:10, status:"WAITING",   owner:"Britney",  deadline:"ASAP",      day:"THU", progress:35, nextAction:"Confirm Britney finished reclassifications",      dateAdded:"2026-03-09" },
+  { id:12, icon:"Ã°ÂÂÂ»", title:"BuilderTrend vs Jobtread",    subtitle:"Decision deadline end of week",                   domain:"Business", priority:3,  status:"ACTIVE",    owner:"David",    deadline:"Mar 13",    day:"FRI", progress:0,  nextAction:"Stop deferring Ã¢ÂÂ make the call by Friday",        dateAdded:"2026-03-09" },
+  { id:8,  icon:"Ã°ÂÂÂ", title:"Daily Steps",                 subtitle:"3,000 avg Ã¢ÂÂ 10,000 goal",                         domain:"Health",   priority:8,  status:"RECURRING", owner:"David",    deadline:"Daily",     day:"MON", progress:30, nextAction:"Log yesterday's steps right now",                 dateAdded:"2026-03-09" },
+  { id:4,  icon:"Ã°ÂÂ§Â¾", title:"Receipt Capture App",         subtitle:"Forward receipts Ã¢ÂÂ auto-route to accounting",    domain:"Business", priority:4,  status:"QUEUED",    owner:"Claude",   deadline:"Next Week", day:null,  progress:0,  nextAction:"Confirm priority Ã¢ÂÂ this week or next?",           dateAdded:"2026-03-09" },
+  { id:6,  icon:"Ã°ÂÂÂÃ¯Â¸Â", title:"Family Compound Plan",        subtitle:"In-laws + Britney Ã¢ÂÂ legal, financial, emotional", domain:"Personal", priority:6,  status:"QUEUED",    owner:"Britney",  deadline:"EOY",       day:null,  progress:0,  nextAction:"Schedule a dedicated brainstorm Ã¢ÂÂ not this week", dateAdded:"2026-03-09" },
+  { id:9,  icon:"Ã°ÂÂÂ", title:"Reagan's 5th Birthday",       subtitle:"April 26 Ã¢ÂÂ planning is overdue",                  domain:"Family",   priority:9,  status:"QUEUED",    owner:"Britney",  deadline:"Apr 26",    day:null,  progress:0,  nextAction:"Party at home or venue? Text Britney today.",     dateAdded:"2026-03-09" },
 ];
 
 const SEED_BIDS = [
@@ -66,15 +75,15 @@ const SEED_BIDS = [
     gcEmail: "bids1@recrawford.com",
     gcPhone: "(941) 907-0010",
     rfiEmail: "jhearn@recrawford.com",
-    projectName: "Kay Jeweler's â Orlando, FL",
+    projectName: "Kay Jeweler's Ã¢ÂÂ Orlando, FL",
     projectAddress: "753 N. Alafaya Trail, H05, Orlando, FL 32828",
-    scope: "2,182 sqft Â· Retail Upfit",
-    trades: "Div. 15 â Plumbing, Fire Protection, HVAC",
+    scope: "2,182 sqft ÃÂ· Retail Upfit",
+    trades: "Div. 15 Ã¢ÂÂ Plumbing, Fire Protection, HVAC",
     bidDue: "2026-03-16T22:00:00.000Z",   // Mar 16 5:00 PM ET
     projectStart: "",
     docsLink: "https://www.dropbox.com/scl/fo/ck25z3o46s8p9bmd4109l/AOHfxfhWxzrseN3qWD4L25c",
     status: "NEW",
-    assignedTo: "Assign â",
+    assignedTo: "Assign Ã¢ÂÂ",
     notes: "",
     receivedDate: "2026-03-09",
     emailSubject: "Invitation to Bid - Kay Jeweler's - Orlando, FL : All Trades",
@@ -85,16 +94,16 @@ const SEED_BIDS = [
     gcEmail: "estimating@casecontracting.com",
     gcPhone: "",
     rfiEmail: "estimating@casecontracting.com",
-    projectName: "Aldi #2503 â Wesley Chapel, FL",
+    projectName: "Aldi #2503 Ã¢ÂÂ Wesley Chapel, FL",
     projectAddress: "27301 Wesley Chapel, FL 33544",
-    scope: "Retrofit Â· All Trades",
-    trades: "All Trades â Plumbing included",
+    scope: "Retrofit ÃÂ· All Trades",
+    trades: "All Trades Ã¢ÂÂ Plumbing included",
     bidDue: "2026-03-24T19:00:00.000Z",   // Mar 24 2:00 PM ET (extended)
     projectStart: "",
     docsLink: "",
     status: "NEW",
-    assignedTo: "Assign â",
-    notes: "Bid date extended from original â addendum pending. PDF bids to estimating@casecontracting.com",
+    assignedTo: "Assign Ã¢ÂÂ",
+    notes: "Bid date extended from original Ã¢ÂÂ addendum pending. PDF bids to estimating@casecontracting.com",
     receivedDate: "2026-03-09",
     emailSubject: "BID DATE EXTENSION - Aldi #2503 Wesley Chapel : All Trades",
   },
@@ -104,9 +113,9 @@ const SEED_BIDS = [
     gcEmail: "chris@bidcraftestimate.com",
     gcPhone: "(321) 382-5723",
     rfiEmail: "",
-    projectName: "Starbucks â Coconut Point Outlets",
+    projectName: "Starbucks Ã¢ÂÂ Coconut Point Outlets",
     projectAddress: "8076 Mediterranean Dr, Estero, FL 33928",
-    scope: "Retail Â· All Trades",
+    scope: "Retail ÃÂ· All Trades",
     trades: "Plumbing",
     bidDue: "2026-03-12T17:00:00.000Z",   // Mar 12 12:00 PM ET
     projectStart: "",
@@ -119,9 +128,9 @@ const SEED_BIDS = [
   },
 ];
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // STORAGE KEYS
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const STORAGE_KEY = "coastal-ops-v2";
 const STEPS_KEY   = "coastal-steps-v2";
 const CAL_KEY     = "coastal-cal-v2";
@@ -133,12 +142,12 @@ const FIREBASE_URL = "https://coastal---ops-default-rtdb.firebaseio.com";
 async function stGet(k,fb){try{if(window.storage){const r=await window.storage.get(k);if(r?.value)return JSON.parse(r.value);}else{const v=localStorage.getItem(k);if(v)return JSON.parse(v);}}catch{}return fb;}
 async function stSet(k,v){try{if(window.storage){await window.storage.set(k,JSON.stringify(v));}else{localStorage.setItem(k,JSON.stringify(v));}}catch{}}
 
-// Map Firebase task format â app task format
+// Map Firebase task format Ã¢ÂÂ app task format
 function mapFirebaseTask(t) {
-  const iconMap = {Business:"ð",Personal:"ð¹",Family:"ð",Health:"ðª"};
+  const iconMap = {Business:"Ã°ÂÂÂ",Personal:"Ã°ÂÂÂ¹",Family:"Ã°ÂÂÂ",Health:"Ã°ÂÂÂª"};
   return {
     id:         t.id || String(Date.now() + Math.random()),
-    icon:       iconMap[t.domain] || "ð",
+    icon:       iconMap[t.domain] || "Ã°ÂÂÂ",
     title:      t.text || "(untitled)",
     subtitle:   t.mins ? `~${t.mins} min` : "",
     domain:     t.domain || "Business",
@@ -184,12 +193,12 @@ async function fbWriteTasks(tasks) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(fbTasks),
     });
-  } catch { /* silent fail â local state is still intact */ }
+  } catch { /* silent fail Ã¢ÂÂ local state is still intact */ }
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // UTILS
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const fmt12 = iso => {
   const d = new Date(iso);
   let h = d.getUTCHours(), m = d.getUTCMinutes();
@@ -228,9 +237,9 @@ function buildMonthGrid(year, month) {
 }
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // API CALLERS
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 async function fetchCalendarEvents() {
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:`Fetch calendar events for davidc@coastalplumbingswfl.com for March 9-15 2026 using outlook_calendar_search. Return ONLY a JSON array:\n[{"subject":"Title","start":"ISO","end":"ISO","location":"","showAs":"busy","isCancelled":false,"organizer":"email","attendeeCount":0}]\nJSON only.`,messages:[{role:"user",content:"Get David's calendar March 9-15 2026."}],mcp_servers:[{type:"url",url:"https://microsoft365.mcp.claude.com/mcp",name:"m365"}]})});
@@ -257,16 +266,16 @@ Return ONLY a JSON array. If none found return []. No markdown.`,messages:[{role
 }
 
 async function scanTaskEmails() {
-  const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,system:`You are David's executive assistant at Coastal Plumbing of SWFL LLC. Search davidc@coastalplumbingswfl.com Inbox and Sent Items from last 48 hours. Exclude Invitation to Bid emails. Identify anything needing follow-up. Return ONLY JSON array:\n[{"icon":"emoji","title":"Short task (max 6 words)","subtitle":"one line context","domain":"Business|Personal|Family|Health","priority":1-10,"status":"ACTIVE|QUEUED|WAITING","owner":"David|Hannah|Britney|Assign â","deadline":"ASAP|This Week|Mar 12|TBD","nextAction":"exact next action","emailFrom":"sender","emailSubject":"subject","emailDate":"Mar 9"}]\nIf nothing return []. JSON only.`,messages:[{role:"user",content:"Scan inbox and sent items last 48 hours for tasks."}],mcp_servers:[{type:"url",url:"https://microsoft365.mcp.claude.com/mcp",name:"m365"}]})});
+  const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,system:`You are David's executive assistant at Coastal Plumbing of SWFL LLC. Search davidc@coastalplumbingswfl.com Inbox and Sent Items from last 48 hours. Exclude Invitation to Bid emails. Identify anything needing follow-up. Return ONLY JSON array:\n[{"icon":"emoji","title":"Short task (max 6 words)","subtitle":"one line context","domain":"Business|Personal|Family|Health","priority":1-10,"status":"ACTIVE|QUEUED|WAITING","owner":"David|Hannah|Britney|Assign Ã¢ÂÂ","deadline":"ASAP|This Week|Mar 12|TBD","nextAction":"exact next action","emailFrom":"sender","emailSubject":"subject","emailDate":"Mar 9"}]\nIf nothing return []. JSON only.`,messages:[{role:"user",content:"Scan inbox and sent items last 48 hours for tasks."}],mcp_servers:[{type:"url",url:"https://microsoft365.mcp.claude.com/mcp",name:"m365"}]})});
   const data = await res.json();
   const text = data.content?.filter(b=>b.type==="text").map(b=>b.text).join("")||"";
   const arr = JSON.parse(text.replace(/```json|```/g,"").trim());
   return Array.isArray(arr)?arr:[];
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // BID DETAIL MODAL
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function BidDetailModal({ bid, onUpdate, onClose }) {
   const [local, setLocal] = useState({...bid});
   const days = daysUntil(local.bidDue);
@@ -281,7 +290,7 @@ function BidDetailModal({ bid, onUpdate, onClose }) {
           <div style={{fontSize:8,color:"#F59E0B",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>{local.gcName}</div>
           <div style={{fontSize:14,fontWeight:800,lineHeight:1.3,color:"#F1F5F9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{local.projectName}</div>
         </div>
-        <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>â</button>
+        <button onClick={onClose} style={{width:32,height:32,borderRadius:"50%",background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>Ã¢ÂÂ</button>
       </div>
 
       <div style={{flex:1,overflowY:"auto",padding:"16px 16px 80px"}}>
@@ -296,7 +305,7 @@ function BidDetailModal({ bid, onUpdate, onClose }) {
           </div>
           {days!==null&&(
             <div style={{textAlign:"center",background:uc+"18",border:`1px solid ${uc}44`,borderRadius:10,padding:"10px 16px",minWidth:64}}>
-              <div style={{fontSize:30,fontWeight:900,color:uc,lineHeight:1}}>{days<0?"â ":days}</div>
+              <div style={{fontSize:30,fontWeight:900,color:uc,lineHeight:1}}>{days<0?"Ã¢ÂÂ ":days}</div>
               <div style={{fontSize:7,color:uc,letterSpacing:1,marginTop:2}}>{days<0?"OVERDUE":days===0?"TODAY":"DAYS"}</div>
             </div>
           )}
@@ -316,13 +325,13 @@ function BidDetailModal({ bid, onUpdate, onClose }) {
 
         {/* Info rows */}
         {[
-          {label:"Address",  val:local.projectAddress, icon:"ð"},
-          {label:"Scope",    val:local.scope,           icon:"ð"},
-          {label:"Trades",   val:local.trades,          icon:"ð§"},
-          {label:"GC Email", val:local.gcEmail,         icon:"ð§"},
-          {label:"GC Phone", val:local.gcPhone,         icon:"ð"},
-          {label:"RFI To",   val:local.rfiEmail,        icon:"â"},
-          {label:"Docs",     val:local.docsLink,        icon:"ð"},
+          {label:"Address",  val:local.projectAddress, icon:"Ã°ÂÂÂ"},
+          {label:"Scope",    val:local.scope,           icon:"Ã°ÂÂÂ"},
+          {label:"Trades",   val:local.trades,          icon:"Ã°ÂÂÂ§"},
+          {label:"GC Email", val:local.gcEmail,         icon:"Ã°ÂÂÂ§"},
+          {label:"GC Phone", val:local.gcPhone,         icon:"Ã°ÂÂÂ"},
+          {label:"RFI To",   val:local.rfiEmail,        icon:"Ã¢ÂÂ"},
+          {label:"Docs",     val:local.docsLink,        icon:"Ã°ÂÂÂ"},
         ].filter(f=>f.val).map((f,i)=>(
           <div key={i} style={{marginBottom:8,padding:"10px 12px",background:"#0c1220",border:"1px solid #1e2d4a",borderRadius:8}}>
             <div style={{fontSize:7,color:"#475569",letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>{f.label}</div>
@@ -334,7 +343,7 @@ function BidDetailModal({ bid, onUpdate, onClose }) {
         <div style={{marginBottom:12}}>
           <div style={{fontSize:8,color:"#475569",letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Assigned Estimator</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {["David","Hannah","Annie","Britney","Assign â"].map(p=>(
+            {["David","Hannah","Annie","Britney","Assign Ã¢ÂÂ"].map(p=>(
               <button key={p} onClick={()=>setLocal(prev=>({...prev,assignedTo:p}))} style={{padding:"5px 12px",borderRadius:8,background:local.assignedTo===p?"#1e3a5f88":"transparent",border:`1px solid ${local.assignedTo===p?"#3B82F6":"#1e2d4a"}`,color:local.assignedTo===p?"#93C5FD":"#374151",fontSize:10,cursor:"pointer",fontWeight:local.assignedTo===p?700:400}}>{p}</button>
             ))}
           </div>
@@ -348,16 +357,16 @@ function BidDetailModal({ bid, onUpdate, onClose }) {
         </div>
 
         <button onClick={()=>{onUpdate(local);onClose();}} style={{width:"100%",padding:"14px",borderRadius:10,background:"#3B82F6",border:"none",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:900,letterSpacing:0.3}}>
-          Save â
+          Save Ã¢ÂÂ
         </button>
       </div>
     </div>
   );
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // BID SCAN MODAL
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function BidScanModal({ existingBids, onAddBids, onClose }) {
   const [phase,setSugg]      = useState("idle");
   const [suggs,setSuggestions]= useState([]);
@@ -386,30 +395,30 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
       <div style={{background:"#0a0f1c",borderBottom:"1px solid #1e2d4a",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <div>
           <div style={{fontSize:8,color:"#F59E0B",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>Estimating Pipeline</div>
-          <div style={{fontSize:17,fontWeight:900}}>ðï¸ Scan for New Bids</div>
+          <div style={{fontSize:17,fontWeight:900}}>Ã°ÂÂÂÃ¯Â¸Â Scan for New Bids</div>
         </div>
-        <button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:12,cursor:"pointer"}}>â Close</button>
+        <button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:12,cursor:"pointer"}}>Ã¢ÂÂ Close</button>
       </div>
 
       <div style={{flex:1,overflowY:"auto",padding:"24px 16px 80px"}}>
         {phase==="idle"&&(
           <div style={{textAlign:"center",paddingTop:48}}>
-            <div style={{fontSize:56,marginBottom:20}}>ð¬</div>
+            <div style={{fontSize:56,marginBottom:20}}>Ã°ÂÂÂ¬</div>
             <div style={{fontSize:16,fontWeight:800,marginBottom:12}}>Scan for Bid Invitations</div>
-            <div style={{fontSize:12,color:"#475569",lineHeight:1.8,marginBottom:36,maxWidth:260,margin:"0 auto 36px"}}>Searches your inbox for "Invitation to Bid", "ITB", "bid date" â reads the full details and drops them onto your Estimating Calendar.</div>
-            <button onClick={runScan} style={{padding:"14px 32px",borderRadius:10,background:"#F59E0B",border:"none",color:"#000",fontSize:14,cursor:"pointer",fontWeight:900}}>Scan Inbox â</button>
+            <div style={{fontSize:12,color:"#475569",lineHeight:1.8,marginBottom:36,maxWidth:260,margin:"0 auto 36px"}}>Searches your inbox for "Invitation to Bid", "ITB", "bid date" Ã¢ÂÂ reads the full details and drops them onto your Estimating Calendar.</div>
+            <button onClick={runScan} style={{padding:"14px 32px",borderRadius:10,background:"#F59E0B",border:"none",color:"#000",fontSize:14,cursor:"pointer",fontWeight:900}}>Scan Inbox Ã¢ÂÂ</button>
           </div>
         )}
         {phase==="scanning"&&(
           <div style={{textAlign:"center",paddingTop:60}}>
-            <div style={{fontSize:48,display:"inline-block",marginBottom:20,animation:"spin 2s linear infinite"}}>ð</div>
+            <div style={{fontSize:48,display:"inline-block",marginBottom:20,animation:"spin 2s linear infinite"}}>Ã°ÂÂÂ</div>
             <div style={{fontSize:14,fontWeight:700,marginBottom:8}}>Scanning...</div>
             <div style={{fontSize:11,color:"#F59E0B"}}>{progress}</div>
           </div>
         )}
         {phase==="empty"&&(
           <div style={{textAlign:"center",paddingTop:60}}>
-            <div style={{fontSize:48,marginBottom:16}}>ð­</div>
+            <div style={{fontSize:48,marginBottom:16}}>Ã°ÂÂÂ­</div>
             <div style={{fontSize:15,fontWeight:700,marginBottom:8}}>No new bids found</div>
             <div style={{fontSize:11,color:"#475569",marginBottom:28,lineHeight:1.7}}>No new Invitation to Bid emails, or all already captured.</div>
             <button onClick={runScan} style={{padding:"12px 24px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:12,cursor:"pointer"}}>Scan Again</button>
@@ -417,7 +426,7 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
         )}
         {phase==="error"&&(
           <div style={{textAlign:"center",paddingTop:60}}>
-            <div style={{fontSize:48,marginBottom:16}}>â ï¸</div>
+            <div style={{fontSize:48,marginBottom:16}}>Ã¢ÂÂ Ã¯Â¸Â</div>
             <div style={{fontSize:14,fontWeight:700,color:"#EF4444",marginBottom:24}}>Scan Failed</div>
             <button onClick={runScan} style={{padding:"12px 24px",borderRadius:8,background:"#F59E0B",border:"none",color:"#000",fontSize:12,cursor:"pointer",fontWeight:700}}>Try Again</button>
           </div>
@@ -426,7 +435,7 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
           <>
             <div style={{marginBottom:18,padding:"12px 14px",background:"#0f1724",border:"1px solid #F59E0B33",borderRadius:10}}>
               <div style={{fontSize:13,fontWeight:800,marginBottom:4}}>{active.length} new bid{active.length!==1?"s":""} found</div>
-              <div style={{fontSize:10,color:"#475569"}}>Tap <span style={{color:"#10B981",fontWeight:700}}>Add</span> to put on the calendar Â· <span style={{color:"#EF4444",fontWeight:700}}>Skip</span> to dismiss</div>
+              <div style={{fontSize:10,color:"#475569"}}>Tap <span style={{color:"#10B981",fontWeight:700}}>Add</span> to put on the calendar ÃÂ· <span style={{color:"#EF4444",fontWeight:700}}>Skip</span> to dismiss</div>
             </div>
             {suggs.map((s,i)=>{
               const isDismissed=dismissed.has(i);
@@ -439,8 +448,8 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
                       {s.receivedDate&&<span style={{fontSize:8,color:"#374151"}}>{s.receivedDate}</span>}
                     </div>
                     <div style={{fontSize:14,fontWeight:800,color:"#F1F5F9",marginBottom:3,lineHeight:1.3}}>{s.projectName}</div>
-                    {s.projectAddress&&<div style={{fontSize:9,color:"#475569",marginBottom:4}}>ð {s.projectAddress}</div>}
-                    {s.trades&&<div style={{fontSize:9,color:"#3B82F6",marginBottom:8}}>ð§ {s.trades}</div>}
+                    {s.projectAddress&&<div style={{fontSize:9,color:"#475569",marginBottom:4}}>Ã°ÂÂÂ {s.projectAddress}</div>}
+                    {s.trades&&<div style={{fontSize:9,color:"#3B82F6",marginBottom:8}}>Ã°ÂÂÂ§ {s.trades}</div>}
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#080d16",borderRadius:6,padding:"6px 10px",marginBottom:8}}>
                       <div>
                         <div style={{fontSize:7,color:"#475569",letterSpacing:1,marginBottom:1}}>BID DUE</div>
@@ -453,11 +462,11 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
                     </div>
                     {!isDismissed?(
                       <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>{dismiss(i);onAddBids([s]);}} style={{flex:2,padding:"9px",borderRadius:8,background:"#052e16bb",border:"1px solid #10B98166",color:"#10B981",fontSize:12,cursor:"pointer",fontWeight:800}}>â Add to Calendar</button>
-                        <button onClick={()=>dismiss(i)} style={{flex:1,padding:"9px",borderRadius:8,background:"#45090a55",border:"1px solid #EF444444",color:"#EF4444",fontSize:12,cursor:"pointer",fontWeight:700}}>â Skip</button>
+                        <button onClick={()=>{dismiss(i);onAddBids([s]);}} style={{flex:2,padding:"9px",borderRadius:8,background:"#052e16bb",border:"1px solid #10B98166",color:"#10B981",fontSize:12,cursor:"pointer",fontWeight:800}}>Ã¢ÂÂ Add to Calendar</button>
+                        <button onClick={()=>dismiss(i)} style={{flex:1,padding:"9px",borderRadius:8,background:"#45090a55",border:"1px solid #EF444444",color:"#EF4444",fontSize:12,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ Skip</button>
                       </div>
                     ):(
-                      <div style={{textAlign:"center",fontSize:10,color:"#374151"}}>Skipped Â· <span onClick={()=>undismiss(i)} style={{color:"#3B82F6",cursor:"pointer"}}>Undo</span></div>
+                      <div style={{textAlign:"center",fontSize:10,color:"#374151"}}>Skipped ÃÂ· <span onClick={()=>undismiss(i)} style={{color:"#3B82F6",cursor:"pointer"}}>Undo</span></div>
                     )}
                   </div>
                 </div>
@@ -465,10 +474,10 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
             })}
             {active.length>1&&(
               <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #1e2d4a"}}>
-                <button onClick={()=>onAddBids(active)} style={{width:"100%",padding:"13px",borderRadius:10,background:"#F59E0B",border:"none",color:"#000",fontSize:14,cursor:"pointer",fontWeight:900}}>â Add All {active.length} to Calendar</button>
+                <button onClick={()=>onAddBids(active)} style={{width:"100%",padding:"13px",borderRadius:10,background:"#F59E0B",border:"none",color:"#000",fontSize:14,cursor:"pointer",fontWeight:900}}>Ã¢ÂÂ Add All {active.length} to Calendar</button>
               </div>
             )}
-            <div style={{textAlign:"center",marginTop:12}}><button onClick={runScan} style={{background:"transparent",border:"none",color:"#475569",fontSize:10,cursor:"pointer"}}>â³ Rescan</button></div>
+            <div style={{textAlign:"center",marginTop:12}}><button onClick={runScan} style={{background:"transparent",border:"none",color:"#475569",fontSize:10,cursor:"pointer"}}>Ã¢ÂÂ³ Rescan</button></div>
           </>
         )}
       </div>
@@ -476,9 +485,9 @@ function BidScanModal({ existingBids, onAddBids, onClose }) {
   );
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // ESTIMATING CALENDAR TAB
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
   const [viewMode,    setViewMode]    = useState("calendar"); // "calendar" | "list"
   const [calYear,     setCalYear]     = useState(2026);
@@ -491,7 +500,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
   const activeBids = bids.filter(b=>!["WON","LOST","DECLINED"].includes(b.status));
   const urgentBids = activeBids.filter(b=>{const d=daysUntil(b.bidDue);return d!==null&&d<=7;});
 
-  // Map bidDue â list of bids for that YYYY-MM-DD
+  // Map bidDue Ã¢ÂÂ list of bids for that YYYY-MM-DD
   const bidsByDate = bids.reduce((acc, b) => {
     const ymd = isoToYMD(b.bidDue);
     if (!ymd) return acc;
@@ -531,14 +540,14 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
       {showScan && <BidScanModal existingBids={bids} onAddBids={newBids=>{onScanBids(newBids);setShowScan(false);}} onClose={()=>setShowScan(false)}/>}
       {detailBid && <BidDetailModal bid={detailBid} onUpdate={b=>{onUpdateBid(b);setDetailBid(null);}} onClose={()=>setDetailBid(null)}/>}
 
-      {/* ââ HEADER ââ */}
+      {/* Ã¢ÂÂÃ¢ÂÂ HEADER Ã¢ÂÂÃ¢ÂÂ */}
       <div style={{background:"#080d18",borderBottom:"1px solid #1e2d4a",padding:"12px 16px",flexShrink:0}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
           <div>
             <div style={{fontSize:8,color:"#F59E0B",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>Estimating Pipeline</div>
             <div style={{fontSize:20,fontWeight:900,letterSpacing:-0.5}}>Bid Calendar</div>
           </div>
-          <button onClick={()=>setShowScan(true)} style={{padding:"7px 14px",borderRadius:8,background:"#1a0e0088",border:"1px solid #F59E0B55",color:"#F59E0B",fontSize:10,cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"}}>ð Scan Emails</button>
+          <button onClick={()=>setShowScan(true)} style={{padding:"7px 14px",borderRadius:8,background:"#1a0e0088",border:"1px solid #F59E0B55",color:"#F59E0B",fontSize:10,cursor:"pointer",fontWeight:700,whiteSpace:"nowrap"}}>Ã°ÂÂÂ Scan Emails</button>
         </div>
 
         {/* Stats strip */}
@@ -559,17 +568,17 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
         {/* Urgent banner */}
         {urgentBids.length>0&&(
           <div style={{background:"#45090a22",border:"1px solid #EF444433",borderRadius:8,padding:"7px 10px",marginBottom:10}}>
-            <div style={{fontSize:8,color:"#EF4444",letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>â  {urgentBids.length} bid{urgentBids.length!==1?"s":""} due within 7 days</div>
+            <div style={{fontSize:8,color:"#EF4444",letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>Ã¢ÂÂ  {urgentBids.length} bid{urgentBids.length!==1?"s":""} due within 7 days</div>
             {urgentBids.slice(0,3).map(b=>{
               const d=daysUntil(b.bidDue);
-              return <div key={b.id} onClick={()=>setDetailBid(b)} style={{fontSize:10,color:"#FCA5A5",marginTop:2,cursor:"pointer"}}>Â· {b.projectName} â {d<0?"OVERDUE":d===0?"TODAY":d+"d"}</div>;
+              return <div key={b.id} onClick={()=>setDetailBid(b)} style={{fontSize:10,color:"#FCA5A5",marginTop:2,cursor:"pointer"}}>ÃÂ· {b.projectName} Ã¢ÂÂ {d<0?"OVERDUE":d===0?"TODAY":d+"d"}</div>;
             })}
           </div>
         )}
 
         {/* View toggle */}
         <div style={{display:"flex",gap:0,background:"#0c1422",border:"1px solid #1e2d4a",borderRadius:8,overflow:"hidden"}}>
-          {[{id:"calendar",label:"ð Calendar"},{id:"list",label:"â° List"}].map(v=>(
+          {[{id:"calendar",label:"Ã°ÂÂÂ Calendar"},{id:"list",label:"Ã¢ÂÂ° List"}].map(v=>(
             <button key={v.id} onClick={()=>{setViewMode(v.id);setSelectedDay(null);}} style={{flex:1,padding:"8px 0",background:viewMode===v.id?"#1e3a5f":"transparent",border:"none",color:viewMode===v.id?"#93C5FD":"#374151",fontSize:11,cursor:"pointer",fontWeight:viewMode===v.id?800:400,transition:"all 0.15s"}}>
               {v.label}
             </button>
@@ -577,17 +586,17 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
         </div>
       </div>
 
-      {/* ââ CALENDAR VIEW ââ */}
+      {/* Ã¢ÂÂÃ¢ÂÂ CALENDAR VIEW Ã¢ÂÂÃ¢ÂÂ */}
       {viewMode==="calendar"&&(
         <div style={{flex:1,overflowY:"auto",padding:"0 0 100px"}}>
           {/* Month nav */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px 8px"}}>
-            <button onClick={prevMonth} style={{width:34,height:34,borderRadius:"50%",background:"#0c1422",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>â¹</button>
+            <button onClick={prevMonth} style={{width:34,height:34,borderRadius:"50%",background:"#0c1422",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>Ã¢ÂÂ¹</button>
             <div style={{textAlign:"center"}}>
               <div style={{fontSize:16,fontWeight:900,letterSpacing:-0.3}}>{MONTH_NAMES[calMonth]}</div>
               <div style={{fontSize:10,color:"#475569"}}>{calYear}</div>
             </div>
-            <button onClick={nextMonth} style={{width:34,height:34,borderRadius:"50%",background:"#0c1422",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>âº</button>
+            <button onClick={nextMonth} style={{width:34,height:34,borderRadius:"50%",background:"#0c1422",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>Ã¢ÂÂº</button>
           </div>
 
           {/* Day-of-week headers */}
@@ -626,7 +635,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
                         const active=!["WON","LOST","DECLINED"].includes(b.status);
                         return(
                           <div key={bi} style={{background:uc+"22",border:`1px solid ${uc}44`,borderRadius:3,padding:"1px 3px",marginBottom:1}}>
-                            <div style={{fontSize:7,fontWeight:700,color:uc,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.projectName.split("â")[0].split("-")[0].trim()}</div>
+                            <div style={{fontSize:7,fontWeight:700,color:uc,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.projectName.split("Ã¢ÂÂ")[0].split("-")[0].trim()}</div>
                           </div>
                         );
                       })}
@@ -642,7 +651,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
           {selectedDay&&(
             <div style={{margin:"12px 10px 0",padding:"14px",background:"#0a0f1c",border:"1px solid #1e2d4a",borderRadius:12}}>
               <div style={{fontSize:9,color:"#F59E0B",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>
-                {MONTH_NAMES[calMonth]} {selectedDay}, {calYear} Â· {selectedDayBids.length} bid{selectedDayBids.length!==1?"s":""}
+                {MONTH_NAMES[calMonth]} {selectedDay}, {calYear} ÃÂ· {selectedDayBids.length} bid{selectedDayBids.length!==1?"s":""}
               </div>
               {selectedDayBids.length===0?(
                 <div style={{fontSize:11,color:"#374151",fontStyle:"italic"}}>No bids due on this date.</div>
@@ -661,8 +670,8 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
                       <div style={{fontSize:9,color:"#475569"}}>{b.projectAddress?.split(",").slice(-2).join(",")||""}</div>
                       <div style={{fontSize:10,fontWeight:700,color:uc}}>{fmt12(b.bidDue)} ET</div>
                     </div>
-                    {b.assignedTo&&b.assignedTo!=="Assign â"&&<div style={{fontSize:8,color:"#374151",marginTop:3}}>ð¤ {b.assignedTo}</div>}
-                    <div style={{marginTop:6,fontSize:9,color:"#3B82F6"}}>Tap to open â</div>
+                    {b.assignedTo&&b.assignedTo!=="Assign Ã¢ÂÂ"&&<div style={{fontSize:8,color:"#374151",marginTop:3}}>Ã°ÂÂÂ¤ {b.assignedTo}</div>}
+                    <div style={{marginTop:6,fontSize:9,color:"#3B82F6"}}>Tap to open Ã¢ÂÂ</div>
                   </div>
                 );
               })}
@@ -671,7 +680,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
 
           {/* Legend */}
           <div style={{margin:"12px 10px 0",display:"flex",gap:10,flexWrap:"wrap"}}>
-            {[{c:"#EF4444",l:"â¤2 days"},{c:"#F59E0B",l:"â¤7 days"},{c:"#10B981",l:">7 days"}].map(x=>(
+            {[{c:"#EF4444",l:"Ã¢ÂÂ¤2 days"},{c:"#F59E0B",l:"Ã¢ÂÂ¤7 days"},{c:"#10B981",l:">7 days"}].map(x=>(
               <div key={x.l} style={{display:"flex",gap:5,alignItems:"center"}}>
                 <div style={{width:10,height:10,borderRadius:2,background:x.c+"44",border:`1px solid ${x.c}66`}}/>
                 <span style={{fontSize:8,color:"#374151"}}>{x.l}</span>
@@ -681,7 +690,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
         </div>
       )}
 
-      {/* ââ LIST VIEW ââ */}
+      {/* Ã¢ÂÂÃ¢ÂÂ LIST VIEW Ã¢ÂÂÃ¢ÂÂ */}
       {viewMode==="list"&&(
         <div style={{flex:1,overflowY:"auto",padding:"12px 16px 100px"}}>
           {/* Status filters */}
@@ -698,7 +707,7 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
 
           {sortedList.length===0?(
             <div style={{textAlign:"center",paddingTop:40,color:"#1e2d4a",fontSize:12}}>
-              {bids.length===0?"No bids yet â tap Scan Emails to pull from inbox":"Nothing in this filter"}
+              {bids.length===0?"No bids yet Ã¢ÂÂ tap Scan Emails to pull from inbox":"Nothing in this filter"}
             </div>
           ):sortedList.map(bid=>{
             const days=daysUntil(bid.bidDue); const uc=urgColor(days);
@@ -711,8 +720,8 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
                   <span style={{fontSize:8,padding:"2px 8px",borderRadius:4,fontWeight:800,background:bs.bg,color:bs.color}}>{bs.label}</span>
                 </div>
                 <div style={{fontSize:14,fontWeight:800,color:"#F1F5F9",lineHeight:1.3,marginBottom:3}}>{bid.projectName}</div>
-                {bid.projectAddress&&<div style={{fontSize:9,color:"#475569",marginBottom:5}}>ð {bid.projectAddress}</div>}
-                {bid.scope&&<div style={{fontSize:9,color:"#64748B",marginBottom:5}}>ð {bid.scope}</div>}
+                {bid.projectAddress&&<div style={{fontSize:9,color:"#475569",marginBottom:5}}>Ã°ÂÂÂ {bid.projectAddress}</div>}
+                {bid.scope&&<div style={{fontSize:9,color:"#64748B",marginBottom:5}}>Ã°ÂÂÂ {bid.scope}</div>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 8px",background:"#080d16",borderRadius:6}}>
                   <div>
                     <div style={{fontSize:7,color:"#475569",letterSpacing:0.8,marginBottom:1}}>BID DUE</div>
@@ -723,12 +732,12 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
                   </div>
                   {days!==null&&(
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:20,fontWeight:900,color:uc,lineHeight:1}}>{days<0?"â ":days}</div>
+                      <div style={{fontSize:20,fontWeight:900,color:uc,lineHeight:1}}>{days<0?"Ã¢ÂÂ ":days}</div>
                       <div style={{fontSize:7,color:uc}}>{days<0?"overdue":days===0?"today":"days"}</div>
                     </div>
                   )}
                 </div>
-                {bid.assignedTo&&bid.assignedTo!=="Assign â"&&<div style={{fontSize:8,color:"#475569",marginTop:5}}>ð¤ {bid.assignedTo}</div>}
+                {bid.assignedTo&&bid.assignedTo!=="Assign Ã¢ÂÂ"&&<div style={{fontSize:8,color:"#475569",marginTop:5}}>Ã°ÂÂÂ¤ {bid.assignedTo}</div>}
               </div>
             );
           })}
@@ -738,35 +747,35 @@ function EstimatingCalendar({ bids, onUpdateBid, onScanBids }) {
   );
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // SHARED COMPONENTS (collapsed for brevity)
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-function QuickCapture({onAdd}){const[t,setT]=useState("");const[d,setD]=useState("Business");const icons={Business:"ð",Personal:"ð¹",Family:"ð",Health:"ðª"};const go=()=>{if(!t.trim())return;onAdd({id:Date.now(),icon:icons[d],title:t.trim(),subtitle:"Quick capture",domain:d,priority:99,status:"QUEUED",owner:"David",deadline:"TBD",day:null,progress:0,nextAction:"Fill in details",dateAdded:TODAY_ISO});setT("");};return(<div style={{background:"#080d18",borderBottom:"1px solid #1e2d4a",padding:"7px 12px"}}><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:12}}>â¡</span><input value={t} onChange={e=>setT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Quick capture..." style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#94A3B8",fontSize:12,fontFamily:"inherit"}}/>{t&&<button onClick={go} style={{padding:"3px 10px",borderRadius:5,background:"#3B82F6",border:"none",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:800}}>ADD</button>}</div>{t&&<div style={{display:"flex",gap:5,marginTop:6}}>{Object.keys(DOMAIN).map(dom=>(<button key={dom} onClick={()=>setD(dom)} style={{flex:1,padding:"4px 0",borderRadius:7,border:`1px solid ${d===dom?DOMAIN[dom].accent:"#1e2d4a"}`,background:d===dom?DOMAIN[dom].dim:"transparent",color:d===dom?DOMAIN[dom].label:"#374151",fontSize:9,cursor:"pointer",fontWeight:d===dom?700:400}}>{dom}</button>))}</div>}</div>);}
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+function QuickCapture({onAdd}){const[t,setT]=useState("");const[d,setD]=useState("Business");const icons={Business:"Ã°ÂÂÂ",Personal:"Ã°ÂÂÂ¹",Family:"Ã°ÂÂÂ",Health:"Ã°ÂÂÂª"};const go=()=>{if(!t.trim())return;onAdd({id:Date.now(),icon:icons[d],title:t.trim(),subtitle:"Quick capture",domain:d,priority:99,status:"QUEUED",owner:"David",deadline:"TBD",day:null,progress:0,nextAction:"Fill in details",dateAdded:TODAY_ISO});setT("");};return(<div style={{background:"#080d18",borderBottom:"1px solid #1e2d4a",padding:"7px 12px"}}><div style={{display:"flex",gap:8,alignItems:"center"}}><span style={{fontSize:12}}>Ã¢ÂÂ¡</span><input value={t} onChange={e=>setT(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Quick capture..." style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#94A3B8",fontSize:12,fontFamily:"inherit"}}/>{t&&<button onClick={go} style={{padding:"3px 10px",borderRadius:5,background:"#3B82F6",border:"none",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:800}}>ADD</button>}</div>{t&&<div style={{display:"flex",gap:5,marginTop:6}}>{Object.keys(DOMAIN).map(dom=>(<button key={dom} onClick={()=>setD(dom)} style={{flex:1,padding:"4px 0",borderRadius:7,border:`1px solid ${d===dom?DOMAIN[dom].accent:"#1e2d4a"}`,background:d===dom?DOMAIN[dom].dim:"transparent",color:d===dom?DOMAIN[dom].label:"#374151",fontSize:9,cursor:"pointer",fontWeight:d===dom?700:400}}>{dom}</button>))}</div>}</div>);}
 
-function CalChip({ev}){const[open,setOpen]=useState(false);const busy=ev.showAs==="busy";return(<div onClick={()=>setOpen(o=>!o)} style={{background:busy?"#0d1f3c":"#0a110d",border:`1px solid ${busy?"#3B82F644":"#10B98133"}`,borderLeft:`3px solid ${busy?"#3B82F6":"#10B981"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer"}}><div style={{display:"flex",gap:7,alignItems:"center"}}><span style={{fontSize:11}}>ð</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:11,fontWeight:700,color:"#CBD5E1",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{ev.subject}</div><div style={{fontSize:9,color:"#475569",marginTop:1}}>{fmt12(ev.start)} â {fmt12(ev.end)}{ev.location&&` Â· ${ev.location.slice(0,22)}`}</div></div><span style={{fontSize:7,color:busy?"#3B82F6":"#10B981",fontWeight:800,letterSpacing:0.5}}>{busy?"BUSY":"TENT"}</span></div>{open&&ev.organizer&&<div style={{marginTop:5,paddingTop:5,borderTop:"1px solid #1e2d4a",fontSize:9,color:"#475569"}}>ð¤ {ev.organizer}</div>}</div>);}
+function CalChip({ev}){const[open,setOpen]=useState(false);const busy=ev.showAs==="busy";return(<div onClick={()=>setOpen(o=>!o)} style={{background:busy?"#0d1f3c":"#0a110d",border:`1px solid ${busy?"#3B82F644":"#10B98133"}`,borderLeft:`3px solid ${busy?"#3B82F6":"#10B981"}`,borderRadius:8,padding:"7px 10px",cursor:"pointer"}}><div style={{display:"flex",gap:7,alignItems:"center"}}><span style={{fontSize:11}}>Ã°ÂÂÂ</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:11,fontWeight:700,color:"#CBD5E1",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{ev.subject}</div><div style={{fontSize:9,color:"#475569",marginTop:1}}>{fmt12(ev.start)} Ã¢ÂÂ {fmt12(ev.end)}{ev.location&&` ÃÂ· ${ev.location.slice(0,22)}`}</div></div><span style={{fontSize:7,color:busy?"#3B82F6":"#10B981",fontWeight:800,letterSpacing:0.5}}>{busy?"BUSY":"TENT"}</span></div>{open&&ev.organizer&&<div style={{marginTop:5,paddingTop:5,borderTop:"1px solid #1e2d4a",fontSize:9,color:"#475569"}}>Ã°ÂÂÂ¤ {ev.organizer}</div>}</div>);}
 
-function TaskCard({task,onDone,onUnschedule,onSchedule}){const[open,setOpen]=useState(false);const d=DOMAIN[task.domain]||DOMAIN.Business;const s=STATUS_META[task.status]||STATUS_META.QUEUED;if(task.status==="DONE")return(<div style={{padding:"7px 10px",borderRadius:8,background:"#0a0f1a",border:"1px solid #1e2d4a",opacity:0.4}}><div style={{fontSize:11,color:"#374151",textDecoration:"line-through"}}>â {task.title}</div></div>);return(<div onClick={()=>setOpen(o=>!o)} style={{background:open?"#131c2e":"#0c1220",border:`1px solid ${open?d.accent+"66":"#1e2d4a"}`,borderLeft:`3px solid ${d.accent}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",position:"relative"}}><div style={{position:"absolute",top:8,right:10,fontSize:8,fontWeight:800,color:task.priority<=2?"#EF4444":"#1e2d4a66"}}>#{task.priority}</div><div style={{display:"flex",gap:7,alignItems:"flex-start",paddingRight:18}}><span style={{fontSize:15,lineHeight:1.2,flexShrink:0}}>{task.icon}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:"#F1F5F9",lineHeight:1.3}}>{task.title}</div><div style={{fontSize:9,color:"#475569",marginTop:2}}>{task.subtitle}</div></div></div>{task.progress>0&&<div style={{margin:"5px 0 2px",background:"#1e2d4a",borderRadius:2,height:2}}><div style={{width:`${task.progress}%`,height:"100%",background:d.accent,borderRadius:2}}/></div>}<div style={{display:"flex",gap:3,marginTop:5,flexWrap:"wrap"}}><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,fontWeight:700,background:s.bg,color:s.color,letterSpacing:0.5}}>{task.status}</span><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:d.dim,color:d.label}}>{task.domain}</span>{task.owner!=="David"&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#6B7280"}}>ð¤ {task.owner}</span>}{task.deadline&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#475569"}}>â± {task.deadline}</span>}</div>{open&&<div style={{marginTop:9,padding:"9px 10px",background:"#080d16",borderRadius:6,borderLeft:`2px solid ${d.accent}`}}><div style={{fontSize:8,color:"#475569",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Next Action</div><div style={{fontSize:11,color:"#10B981",lineHeight:1.6}}>â {task.nextAction}</div><div style={{display:"flex",gap:7,marginTop:9,flexWrap:"wrap"}}>{onDone&&<button onClick={e=>{e.stopPropagation();onDone(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#052e16aa",border:"1px solid #10B98155",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>â Done</button>}{onUnschedule&&task.day&&<button onClick={e=>{e.stopPropagation();onUnschedule(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#45090a44",border:"1px solid #EF444433",color:"#EF4444",fontSize:10,cursor:"pointer",fontWeight:700}}>â Off board</button>}{onSchedule&&!task.day&&<button onClick={e=>{e.stopPropagation();onSchedule(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#1e3a5f88",border:"1px solid #3B82F644",color:"#93C5FD",fontSize:10,cursor:"pointer",fontWeight:700}}>ð Schedule</button>}</div></div>}</div>);}
+function TaskCard({task,onDone,onUnschedule,onSchedule}){const[open,setOpen]=useState(false);const d=DOMAIN[task.domain]||DOMAIN.Business;const s=STATUS_META[task.status]||STATUS_META.QUEUED;if(task.status==="DONE")return(<div style={{padding:"7px 10px",borderRadius:8,background:"#0a0f1a",border:"1px solid #1e2d4a",opacity:0.4}}><div style={{fontSize:11,color:"#374151",textDecoration:"line-through"}}>Ã¢ÂÂ {task.title}</div></div>);return(<div onClick={()=>setOpen(o=>!o)} style={{background:open?"#131c2e":"#0c1220",border:`1px solid ${open?d.accent+"66":"#1e2d4a"}`,borderLeft:`3px solid ${d.accent}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",position:"relative"}}><div style={{position:"absolute",top:8,right:10,fontSize:8,fontWeight:800,color:task.priority<=2?"#EF4444":"#1e2d4a66"}}>#{task.priority}</div><div style={{display:"flex",gap:7,alignItems:"flex-start",paddingRight:18}}><span style={{fontSize:15,lineHeight:1.2,flexShrink:0}}>{task.icon}</span><div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:"#F1F5F9",lineHeight:1.3}}>{task.title}</div><div style={{fontSize:9,color:"#475569",marginTop:2}}>{task.subtitle}</div></div></div>{task.progress>0&&<div style={{margin:"5px 0 2px",background:"#1e2d4a",borderRadius:2,height:2}}><div style={{width:`${task.progress}%`,height:"100%",background:d.accent,borderRadius:2}}/></div>}<div style={{display:"flex",gap:3,marginTop:5,flexWrap:"wrap"}}><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,fontWeight:700,background:s.bg,color:s.color,letterSpacing:0.5}}>{task.status}</span><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:d.dim,color:d.label}}>{task.domain}</span>{task.owner!=="David"&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#6B7280"}}>Ã°ÂÂÂ¤ {task.owner}</span>}{task.deadline&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#475569"}}>Ã¢ÂÂ± {task.deadline}</span>}</div>{open&&<div style={{marginTop:9,padding:"9px 10px",background:"#080d16",borderRadius:6,borderLeft:`2px solid ${d.accent}`}}><div style={{fontSize:8,color:"#475569",letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Next Action</div><div style={{fontSize:11,color:"#10B981",lineHeight:1.6}}>Ã¢ÂÂ {task.nextAction}</div><div style={{display:"flex",gap:7,marginTop:9,flexWrap:"wrap"}}>{onDone&&<button onClick={e=>{e.stopPropagation();onDone(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#052e16aa",border:"1px solid #10B98155",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ Done</button>}{onUnschedule&&task.day&&<button onClick={e=>{e.stopPropagation();onUnschedule(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#45090a44",border:"1px solid #EF444433",color:"#EF4444",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ Off board</button>}{onSchedule&&!task.day&&<button onClick={e=>{e.stopPropagation();onSchedule(task.id);}} style={{flex:1,padding:"7px",borderRadius:6,background:"#1e3a5f88",border:"1px solid #3B82F644",color:"#93C5FD",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã°ÂÂÂ Schedule</button>}</div></div>}</div>);}
 
 function WeekStrip({activeDayIdx,tasks,calEvents,onSelect}){return(<div style={{display:"flex",borderBottom:"1px solid #1e2d4a",background:"#080d18",overflowX:"auto",flexShrink:0}}>{DAYS_SHORT.map((day,i)=>{const isToday=i===TODAY_IDX,isActive=i===activeDayIdx;const tc=tasks.filter(t=>t.day===day&&t.status!=="DONE").length;const ec=calEvents.filter(e=>calDayKey(e.start)===day&&!e.isCancelled).length;return(<div key={day} onClick={()=>onSelect(i)} style={{flex:1,minWidth:42,padding:"7px 3px",textAlign:"center",cursor:"pointer",borderBottom:`2px solid ${isActive?"#3B82F6":"transparent"}`,background:isActive?"#0d1628":"transparent"}}><div style={{fontSize:8,fontWeight:800,letterSpacing:0.8,color:isActive?"#3B82F6":isToday?"#64748B":"#374151"}}>{day}</div><div style={{fontSize:7,color:"#1e2d4a",marginBottom:3}}>{DAY_DATES[i].split(" ")[1]}</div><div style={{display:"flex",gap:2,justifyContent:"center"}}>{tc>0&&<div style={{width:4,height:4,borderRadius:"50%",background:"#3B82F6"}}/>}{ec>0&&<div style={{width:4,height:4,borderRadius:"50%",background:"#10B981"}}/>}</div></div>);})}</div>);}
 
 function ScheduleModal({taskId,tasks,onSchedule,onClose}){const task=tasks.find(t=>t.id===taskId);if(!task)return null;return(<div style={{position:"fixed",inset:0,background:"#060a12ee",backdropFilter:"blur(8px)",zIndex:999,display:"flex",alignItems:"flex-end"}}><div style={{background:"#0c1220",border:"1px solid #1e2d4a",borderRadius:"16px 16px 0 0",padding:22,width:"100%",boxShadow:"0 -20px 60px #00000099"}}><div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{task.icon} {task.title}</div><div style={{fontSize:9,color:"#475569",marginBottom:14}}>Pick a day:</div><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,marginBottom:14}}>{DAYS_SHORT.map((day,i)=>(<button key={day} onClick={()=>onSchedule(taskId,day)} style={{padding:"9px 0",borderRadius:8,background:i===TODAY_IDX?"#1e3a5f":"#111827",border:`1px solid ${i===TODAY_IDX?"#3B82F6":"#1e2d4a"}`,color:i===TODAY_IDX?"#93C5FD":"#94A3B8",fontSize:10,cursor:"pointer",fontWeight:700}}><div>{day}</div><div style={{fontSize:7,color:"#475569",marginTop:1}}>{DAY_DATES[i].split(" ")[1]}</div></button>))}</div><button onClick={onClose} style={{width:"100%",padding:"11px",borderRadius:8,background:"transparent",border:"1px solid #1e2d4a",color:"#475569",fontSize:11,cursor:"pointer"}}>Cancel</button></div></div>);}
 
-function AddModal({onAdd,onClose}){const[f,setF]=useState({title:"",subtitle:"",domain:"Business",priority:5,status:"QUEUED",owner:"David",deadline:"",day:null,nextAction:""});const inp=(k,v)=>setF(p=>({...p,[k]:v}));const icons={Business:"ð",Personal:"ð¹",Family:"ð",Health:"ðª"};const I={width:"100%",background:"#111827",border:"1px solid #1e2d4a",borderRadius:8,padding:"9px 11px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit",boxSizing:"border-box"};const L={fontSize:8,color:"#475569",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4,display:"block"};const go=()=>{if(!f.title.trim())return;onAdd({...f,id:Date.now(),icon:icons[f.domain],progress:0,dateAdded:TODAY_ISO});onClose();};return(<div style={{position:"fixed",inset:0,background:"#060a12ee",backdropFilter:"blur(8px)",zIndex:999,display:"flex",alignItems:"flex-end"}}><div style={{background:"#0c1220",border:"1px solid #1e2d4a",borderRadius:"16px 16px 0 0",padding:22,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 -20px 60px #00000099"}}><div style={{fontSize:16,fontWeight:800,marginBottom:16}}>+ New Task</div><div style={{display:"flex",flexDirection:"column",gap:12}}><div><label style={L}>Title *</label><input style={I} value={f.title} onChange={e=>inp("title",e.target.value)} placeholder="What needs to happen?"/></div><div><label style={L}>Details</label><input style={I} value={f.subtitle} onChange={e=>inp("subtitle",e.target.value)} placeholder="Context..."/></div><div><label style={L}>Next Action</label><input style={I} value={f.nextAction} onChange={e=>inp("nextAction",e.target.value)} placeholder="First physical step..."/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><label style={L}>Domain</label><select style={I} value={f.domain} onChange={e=>inp("domain",e.target.value)}>{Object.keys(DOMAIN).map(d=><option key={d}>{d}</option>)}</select></div><div><label style={L}>Owner</label><select style={I} value={f.owner} onChange={e=>inp("owner",e.target.value)}>{PEOPLE.map(p=><option key={p}>{p}</option>)}</select></div><div><label style={L}>Status</label><select style={I} value={f.status} onChange={e=>inp("status",e.target.value)}>{["ACTIVE","QUEUED","WAITING","RECURRING"].map(s=><option key={s}>{s}</option>)}</select></div><div><label style={L}>Deadline</label><input style={I} value={f.deadline} onChange={e=>inp("deadline",e.target.value)} placeholder="Mar 13..."/></div></div></div><div style={{display:"flex",gap:9,marginTop:18}}><button onClick={onClose} style={{flex:1,padding:"11px",borderRadius:8,background:"transparent",border:"1px solid #1e2d4a",color:"#475569",fontSize:12,cursor:"pointer"}}>Cancel</button><button onClick={go} style={{flex:2,padding:"11px",borderRadius:8,background:"#3B82F6",border:"none",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:800}}>Add â</button></div></div></div>);}
+function AddModal({onAdd,onClose}){const[f,setF]=useState({title:"",subtitle:"",domain:"Business",priority:5,status:"QUEUED",owner:"David",deadline:"",day:null,nextAction:""});const inp=(k,v)=>setF(p=>({...p,[k]:v}));const icons={Business:"Ã°ÂÂÂ",Personal:"Ã°ÂÂÂ¹",Family:"Ã°ÂÂÂ",Health:"Ã°ÂÂÂª"};const I={width:"100%",background:"#111827",border:"1px solid #1e2d4a",borderRadius:8,padding:"9px 11px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit",boxSizing:"border-box"};const L={fontSize:8,color:"#475569",letterSpacing:1.2,textTransform:"uppercase",marginBottom:4,display:"block"};const go=()=>{if(!f.title.trim())return;onAdd({...f,id:Date.now(),icon:icons[f.domain],progress:0,dateAdded:TODAY_ISO});onClose();};return(<div style={{position:"fixed",inset:0,background:"#060a12ee",backdropFilter:"blur(8px)",zIndex:999,display:"flex",alignItems:"flex-end"}}><div style={{background:"#0c1220",border:"1px solid #1e2d4a",borderRadius:"16px 16px 0 0",padding:22,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 -20px 60px #00000099"}}><div style={{fontSize:16,fontWeight:800,marginBottom:16}}>+ New Task</div><div style={{display:"flex",flexDirection:"column",gap:12}}><div><label style={L}>Title *</label><input style={I} value={f.title} onChange={e=>inp("title",e.target.value)} placeholder="What needs to happen?"/></div><div><label style={L}>Details</label><input style={I} value={f.subtitle} onChange={e=>inp("subtitle",e.target.value)} placeholder="Context..."/></div><div><label style={L}>Next Action</label><input style={I} value={f.nextAction} onChange={e=>inp("nextAction",e.target.value)} placeholder="First physical step..."/></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><div><label style={L}>Domain</label><select style={I} value={f.domain} onChange={e=>inp("domain",e.target.value)}>{Object.keys(DOMAIN).map(d=><option key={d}>{d}</option>)}</select></div><div><label style={L}>Owner</label><select style={I} value={f.owner} onChange={e=>inp("owner",e.target.value)}>{PEOPLE.map(p=><option key={p}>{p}</option>)}</select></div><div><label style={L}>Status</label><select style={I} value={f.status} onChange={e=>inp("status",e.target.value)}>{["ACTIVE","QUEUED","WAITING","RECURRING"].map(s=><option key={s}>{s}</option>)}</select></div><div><label style={L}>Deadline</label><input style={I} value={f.deadline} onChange={e=>inp("deadline",e.target.value)} placeholder="Mar 13..."/></div></div></div><div style={{display:"flex",gap:9,marginTop:18}}><button onClick={onClose} style={{flex:1,padding:"11px",borderRadius:8,background:"transparent",border:"1px solid #1e2d4a",color:"#475569",fontSize:12,cursor:"pointer"}}>Cancel</button><button onClick={go} style={{flex:2,padding:"11px",borderRadius:8,background:"#3B82F6",border:"none",color:"#fff",fontSize:13,cursor:"pointer",fontWeight:800}}>Add Ã¢ÂÂ</button></div></div></div>);}
 
-function DayView({dayIdx,tasks,calEvents,onDone,onUnschedule,onSchedule}){const day=DAYS_SHORT[dayIdx],isToday=dayIdx===TODAY_IDX;const dayTasks=tasks.filter(t=>t.day===day&&t.status!=="DONE");const doneTasks=tasks.filter(t=>t.day===day&&t.status==="DONE");const dayEvents=calEvents.filter(e=>calDayKey(e.start)===day&&!e.isCancelled).sort((a,b)=>new Date(a.start)-new Date(b.start));return(<div style={{padding:"0 14px 100px"}}><div style={{padding:"14px 0 10px",borderBottom:"1px solid #1e2d4a",marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}><div><div style={{fontSize:24,fontWeight:900,letterSpacing:-0.8,color:isToday?"#3B82F6":"#F1F5F9"}}>{DAY_FULL[dayIdx]}</div><div style={{fontSize:11,color:"#475569",marginTop:1}}>{DAY_DATES[dayIdx]}, 2026</div></div><div style={{textAlign:"right"}}>{isToday&&<div style={{fontSize:8,background:"#3B82F6",color:"#fff",padding:"2px 7px",borderRadius:4,fontWeight:800,letterSpacing:0.8,marginBottom:3}}>TODAY</div>}<div style={{fontSize:10,color:"#475569"}}>{dayTasks.length}t Â· {dayEvents.length}m</div></div></div></div>{dayTasks.length===0&&dayEvents.length===0&&<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>â Clear day â</div>}{dayEvents.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>ð Calendar</div><div style={{display:"flex",flexDirection:"column",gap:5}}>{dayEvents.map((ev,i)=><CalChip key={i} ev={ev}/>)}</div></div>}{dayTasks.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>ð¯ Tasks</div><div style={{display:"flex",flexDirection:"column",gap:7}}>{dayTasks.map(t=><TaskCard key={t.id} task={t} onDone={onDone} onUnschedule={onUnschedule}/>)}</div></div>}{doneTasks.length>0&&<div style={{opacity:0.45}}><div style={{fontSize:8,color:"#374151",letterSpacing:1.5,textTransform:"uppercase",marginBottom:5}}>â Done</div><div style={{display:"flex",flexDirection:"column",gap:4}}>{doneTasks.map(t=><TaskCard key={t.id} task={t}/>)}</div></div>}</div>);}
+function DayView({dayIdx,tasks,calEvents,onDone,onUnschedule,onSchedule}){const day=DAYS_SHORT[dayIdx],isToday=dayIdx===TODAY_IDX;const dayTasks=tasks.filter(t=>t.day===day&&t.status!=="DONE");const doneTasks=tasks.filter(t=>t.day===day&&t.status==="DONE");const dayEvents=calEvents.filter(e=>calDayKey(e.start)===day&&!e.isCancelled).sort((a,b)=>new Date(a.start)-new Date(b.start));return(<div style={{padding:"0 14px 100px"}}><div style={{padding:"14px 0 10px",borderBottom:"1px solid #1e2d4a",marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}><div><div style={{fontSize:24,fontWeight:900,letterSpacing:-0.8,color:isToday?"#3B82F6":"#F1F5F9"}}>{DAY_FULL[dayIdx]}</div><div style={{fontSize:11,color:"#475569",marginTop:1}}>{DAY_DATES[dayIdx]}, 2026</div></div><div style={{textAlign:"right"}}>{isToday&&<div style={{fontSize:8,background:"#3B82F6",color:"#fff",padding:"2px 7px",borderRadius:4,fontWeight:800,letterSpacing:0.8,marginBottom:3}}>TODAY</div>}<div style={{fontSize:10,color:"#475569"}}>{dayTasks.length}t ÃÂ· {dayEvents.length}m</div></div></div></div>{dayTasks.length===0&&dayEvents.length===0&&<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>Ã¢ÂÂ Clear day Ã¢ÂÂ</div>}{dayEvents.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Ã°ÂÂÂ Calendar</div><div style={{display:"flex",flexDirection:"column",gap:5}}>{dayEvents.map((ev,i)=><CalChip key={i} ev={ev}/>)}</div></div>}{dayTasks.length>0&&<div style={{marginBottom:14}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Ã°ÂÂÂ¯ Tasks</div><div style={{display:"flex",flexDirection:"column",gap:7}}>{dayTasks.map(t=><TaskCard key={t.id} task={t} onDone={onDone} onUnschedule={onUnschedule}/>)}</div></div>}{doneTasks.length>0&&<div style={{opacity:0.45}}><div style={{fontSize:8,color:"#374151",letterSpacing:1.5,textTransform:"uppercase",marginBottom:5}}>Ã¢ÂÂ Done</div><div style={{display:"flex",flexDirection:"column",gap:4}}>{doneTasks.map(t=><TaskCard key={t.id} task={t}/>)}</div></div>}</div>);}
 
-function QueueView({tasks,onDone,onScheduleRequest}){const unscheduled=tasks.filter(t=>!t.day&&t.status!=="DONE");const[filter,setFilter]=useState("ALL");const filtered=filter==="ALL"?unscheduled:unscheduled.filter(t=>t.domain===filter);return(<div style={{padding:"14px 14px 100px"}}><div style={{marginBottom:14}}><div style={{fontSize:8,color:unscheduled.length>2?"#EF4444":"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:3}}>{unscheduled.length} unscheduled</div><div style={{fontSize:22,fontWeight:900,letterSpacing:-0.5}}>Mission Queue</div></div><div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>{["ALL",...Object.keys(DOMAIN)].map(d=>(<button key={d} onClick={()=>setFilter(d)} style={{padding:"4px 11px",borderRadius:10,border:`1px solid ${filter===d?(DOMAIN[d]?.accent||"#3B82F6"):"#1e2d4a"}`,background:filter===d?(DOMAIN[d]?.dim||"#1e3a5f22"):"transparent",color:filter===d?(DOMAIN[d]?.label||"#93C5FD"):"#374151",fontSize:10,cursor:"pointer",fontWeight:filter===d?700:400}}>{d}</button>))}</div>{filtered.length===0?<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>â Queue empty</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{filtered.map(t=><TaskCard key={t.id} task={t} onDone={onDone} onSchedule={onScheduleRequest}/>)}</div>}</div>);}
+function QueueView({tasks,onDone,onScheduleRequest}){const unscheduled=tasks.filter(t=>!t.day&&t.status!=="DONE");const[filter,setFilter]=useState("ALL");const filtered=filter==="ALL"?unscheduled:unscheduled.filter(t=>t.domain===filter);return(<div style={{padding:"14px 14px 100px"}}><div style={{marginBottom:14}}><div style={{fontSize:8,color:unscheduled.length>2?"#EF4444":"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:3}}>{unscheduled.length} unscheduled</div><div style={{fontSize:22,fontWeight:900,letterSpacing:-0.5}}>Mission Queue</div></div><div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>{["ALL",...Object.keys(DOMAIN)].map(d=>(<button key={d} onClick={()=>setFilter(d)} style={{padding:"4px 11px",borderRadius:10,border:`1px solid ${filter===d?(DOMAIN[d]?.accent||"#3B82F6"):"#1e2d4a"}`,background:filter===d?(DOMAIN[d]?.dim||"#1e3a5f22"):"transparent",color:filter===d?(DOMAIN[d]?.label||"#93C5FD"):"#374151",fontSize:10,cursor:"pointer",fontWeight:filter===d?700:400}}>{d}</button>))}</div>{filtered.length===0?<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>Ã¢ÂÂ Queue empty</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{filtered.map(t=><TaskCard key={t.id} task={t} onDone={onDone} onSchedule={onScheduleRequest}/>)}</div>}</div>);}
 
-function TeamView({tasks,onMarkDone,onMarkReturned}){const delegated=tasks.filter(t=>!["David","Assign â"].includes(t.owner)&&t.status!=="DONE");const byPerson=delegated.reduce((a,t)=>{(a[t.owner]??=[]).push(t);return a;},{});return(<div style={{padding:"14px 14px 100px"}}><div style={{marginBottom:18}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:3}}>{delegated.length} open</div><div style={{fontSize:22,fontWeight:900,letterSpacing:-0.5}}>Delegation</div></div>{Object.keys(byPerson).length===0?<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>Nothing delegated</div>:Object.entries(byPerson).map(([person,pts])=>(<div key={person} style={{marginBottom:22}}><div style={{display:"flex",alignItems:"center",gap:9,marginBottom:9,paddingBottom:7,borderBottom:"1px solid #1e2d4a"}}><div style={{width:36,height:36,borderRadius:"50%",background:"#1e2d4a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>ð¤</div><div><div style={{fontSize:15,fontWeight:800}}>{person}</div><div style={{fontSize:9,color:"#475569"}}>{pts.length} open</div></div><div style={{marginLeft:"auto",fontSize:8,color:"#EF4444",fontWeight:800}}>FOLLOW UP</div></div>{pts.map(task=>(<div key={task.id} style={{background:"#0c1220",border:"1px solid #EF444433",borderLeft:"3px solid #EF4444",borderRadius:8,padding:"11px 12px",marginBottom:7}}><div style={{fontSize:12,fontWeight:700}}>{task.icon} {task.title}</div><div style={{fontSize:9,color:"#475569",marginTop:2}}>{task.subtitle}</div><div style={{fontSize:10,color:"#10B981",marginTop:5}}>â {task.nextAction}</div><div style={{display:"flex",gap:7,marginTop:9}}><button onClick={()=>onMarkReturned(task.id)} style={{flex:1,padding:"7px",borderRadius:6,background:"#052e16aa",border:"1px solid #10B98155",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>â Back to Me</button><button onClick={()=>onMarkDone(task.id)} style={{flex:1,padding:"7px",borderRadius:6,background:"#11182788",border:"1px solid #37415133",color:"#6B7280",fontSize:10,cursor:"pointer",fontWeight:700}}>â Done</button></div></div>))}</div>))}</div>);}
+function TeamView({tasks,onMarkDone,onMarkReturned}){const delegated=tasks.filter(t=>!["David","Assign Ã¢ÂÂ"].includes(t.owner)&&t.status!=="DONE");const byPerson=delegated.reduce((a,t)=>{(a[t.owner]??=[]).push(t);return a;},{});return(<div style={{padding:"14px 14px 100px"}}><div style={{marginBottom:18}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:3}}>{delegated.length} open</div><div style={{fontSize:22,fontWeight:900,letterSpacing:-0.5}}>Delegation</div></div>{Object.keys(byPerson).length===0?<div style={{textAlign:"center",paddingTop:36,color:"#1e2d4a",fontSize:12}}>Nothing delegated</div>:Object.entries(byPerson).map(([person,pts])=>(<div key={person} style={{marginBottom:22}}><div style={{display:"flex",alignItems:"center",gap:9,marginBottom:9,paddingBottom:7,borderBottom:"1px solid #1e2d4a"}}><div style={{width:36,height:36,borderRadius:"50%",background:"#1e2d4a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>Ã°ÂÂÂ¤</div><div><div style={{fontSize:15,fontWeight:800}}>{person}</div><div style={{fontSize:9,color:"#475569"}}>{pts.length} open</div></div><div style={{marginLeft:"auto",fontSize:8,color:"#EF4444",fontWeight:800}}>FOLLOW UP</div></div>{pts.map(task=>(<div key={task.id} style={{background:"#0c1220",border:"1px solid #EF444433",borderLeft:"3px solid #EF4444",borderRadius:8,padding:"11px 12px",marginBottom:7}}><div style={{fontSize:12,fontWeight:700}}>{task.icon} {task.title}</div><div style={{fontSize:9,color:"#475569",marginTop:2}}>{task.subtitle}</div><div style={{fontSize:10,color:"#10B981",marginTop:5}}>Ã¢ÂÂ {task.nextAction}</div><div style={{display:"flex",gap:7,marginTop:9}}><button onClick={()=>onMarkReturned(task.id)} style={{flex:1,padding:"7px",borderRadius:6,background:"#052e16aa",border:"1px solid #10B98155",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ Back to Me</button><button onClick={()=>onMarkDone(task.id)} style={{flex:1,padding:"7px",borderRadius:6,background:"#11182788",border:"1px solid #37415133",color:"#6B7280",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ Done</button></div></div>))}</div>))}</div>);}
 
-function EmailScanModal({onAddTasks,onClose}){const[phase,setPhase]=useState("idle");const[suggs,setSuggs]=useState([]);const[dism,setDism]=useState(new Set());const[prog,setProg]=useState("");const run=async()=>{setPhase("scanning");setProg("Connecting...");try{await new Promise(r=>setTimeout(r,500));setProg("Reading Inbox + Sent...");await new Promise(r=>setTimeout(r,400));setProg("AI analysis...");const t=await scanTaskEmails();if(!t||!t.length){setPhase("empty");return;}const prev=await stGet(SCAN_KEY,[]);const have=new Set(prev.map(x=>x.title));const fresh=t.filter(x=>!have.has(x.title));if(!fresh.length){setPhase("empty");return;}setSuggs(fresh);setDism(new Set());setPhase("review");}catch{setPhase("error");}};const active=suggs.filter((_,i)=>!dism.has(i));const dismiss=i=>setDism(p=>new Set([...p,i]));const undismiss=i=>setDism(p=>{const n=new Set(p);n.delete(i);return n;});return(<div style={{position:"fixed",inset:0,background:"#060a12f8",backdropFilter:"blur(14px)",zIndex:1500,display:"flex",flexDirection:"column"}}><div style={{background:"#0a0f1c",borderBottom:"1px solid #1e2d4a",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div><div style={{fontSize:8,color:"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>Inbox + Sent Â· 48hrs</div><div style={{fontSize:17,fontWeight:900}}>ð§ Email Scan</div></div><button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:12,cursor:"pointer"}}>â Close</button></div><div style={{flex:1,overflowY:"auto",padding:"22px 16px 80px"}}>{phase==="idle"&&<div style={{textAlign:"center",paddingTop:44}}><div style={{fontSize:52,marginBottom:16}}>ð¬</div><div style={{fontSize:15,fontWeight:800,marginBottom:10}}>Ready to Scan</div><div style={{fontSize:11,color:"#475569",lineHeight:1.8,marginBottom:32,maxWidth:250,margin:"0 auto 32px"}}>Reads Inbox + Sent last 48hrs. Excludes bid emails â those go to the Estimating Calendar.</div><button onClick={run} style={{padding:"13px 30px",borderRadius:10,background:"#3B82F6",border:"none",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:900}}>Scan Now â</button></div>}{phase==="scanning"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,display:"inline-block",marginBottom:18,animation:"spin 2s linear infinite"}}>ð</div><div style={{fontSize:13,fontWeight:700,marginBottom:7}}>Scanning...</div><div style={{fontSize:11,color:"#3B82F6"}}>{prog}</div></div>}{phase==="empty"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,marginBottom:14}}>â¨</div><div style={{fontSize:15,fontWeight:700,marginBottom:7}}>All clear</div><div style={{fontSize:11,color:"#475569",marginBottom:28}}>No new actionable emails found.</div><button onClick={run} style={{padding:"11px 22px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:12,cursor:"pointer"}}>Scan Again</button></div>}{phase==="error"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,marginBottom:14}}>â ï¸</div><div style={{fontSize:13,fontWeight:700,color:"#EF4444",marginBottom:22}}>Scan Failed</div><button onClick={run} style={{padding:"11px 22px",borderRadius:8,background:"#3B82F6",border:"none",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:700}}>Try Again</button></div>}{phase==="review"&&<><div style={{marginBottom:16,padding:"11px 13px",borderRadius:10,background:"#0d1628",border:"1px solid #3B82F644"}}><div style={{fontSize:13,fontWeight:800,marginBottom:3}}>{active.length} suggested task{active.length!==1?"s":""}</div><div style={{fontSize:10,color:"#475569"}}>Tap <span style={{color:"#10B981",fontWeight:700}}>Add</span> Â· <span style={{color:"#EF4444",fontWeight:700}}>Skip</span> to dismiss</div></div>{suggs.map((s,i)=>{const isDismissed=dism.has(i);const dom=DOMAIN[s.domain]||DOMAIN.Business;return(<div key={i} style={{marginBottom:10,opacity:isDismissed?0.3:1,transition:"opacity 0.2s"}}><div style={{background:"#0c1220",border:`1px solid ${isDismissed?"#1e2d4a":dom.accent+"55"}`,borderLeft:`3px solid ${isDismissed?"#374151":dom.accent}`,borderRadius:10,padding:"12px 12px 10px"}}><div style={{display:"flex",gap:5,marginBottom:7}}><span style={{fontSize:8,color:"#3B82F6",background:"#1e3a5f44",border:"1px solid #3B82F633",borderRadius:4,padding:"2px 7px",maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>ð§ {s.emailFrom}</span>{s.emailDate&&<span style={{fontSize:7,color:"#374151"}}>{s.emailDate}</span>}</div>{s.emailSubject&&<div style={{fontSize:8,color:"#374151",marginBottom:7,fontStyle:"italic",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>"{s.emailSubject}"</div>}<div style={{fontSize:13,fontWeight:700,color:"#F1F5F9",marginBottom:3,lineHeight:1.3}}>{s.icon} {s.title}</div><div style={{fontSize:10,color:"#64748B",marginBottom:5,lineHeight:1.4}}>{s.subtitle}</div><div style={{fontSize:10,color:"#10B981",marginBottom:9}}>â {s.nextAction}</div><div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:9}}><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:dom.dim,color:dom.label}}>{s.domain}</span><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#475569"}}>â± {s.deadline}</span>{s.owner!=="David"&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#6B7280"}}>ð¤ {s.owner}</span>}</div>{!isDismissed?<div style={{display:"flex",gap:7}}><button onClick={()=>{dismiss(i);onAddTasks([s]);}} style={{flex:2,padding:"9px",borderRadius:7,background:"#052e16bb",border:"1px solid #10B98166",color:"#10B981",fontSize:12,cursor:"pointer",fontWeight:800}}>â Add</button><button onClick={()=>dismiss(i)} style={{flex:1,padding:"9px",borderRadius:7,background:"#45090a55",border:"1px solid #EF444444",color:"#EF4444",fontSize:12,cursor:"pointer",fontWeight:700}}>â</button></div>:<div style={{textAlign:"center",fontSize:10,color:"#374151"}}>Skipped Â· <span onClick={()=>undismiss(i)} style={{color:"#3B82F6",cursor:"pointer"}}>Undo</span></div>}</div></div>);})}
-{active.length>1&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #1e2d4a"}}><button onClick={()=>{stSet(SCAN_KEY,suggs);onAddTasks(active);}} style={{width:"100%",padding:"13px",borderRadius:10,background:"#3B82F6",border:"none",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:900}}>â Add All {active.length}</button></div>}<div style={{textAlign:"center",marginTop:12}}><button onClick={run} style={{background:"transparent",border:"none",color:"#475569",fontSize:10,cursor:"pointer"}}>â³ Rescan</button></div></>}</div></div>);}
+function EmailScanModal({onAddTasks,onClose}){const[phase,setPhase]=useState("idle");const[suggs,setSuggs]=useState([]);const[dism,setDism]=useState(new Set());const[prog,setProg]=useState("");const run=async()=>{setPhase("scanning");setProg("Connecting...");try{await new Promise(r=>setTimeout(r,500));setProg("Reading Inbox + Sent...");await new Promise(r=>setTimeout(r,400));setProg("AI analysis...");const t=await scanTaskEmails();if(!t||!t.length){setPhase("empty");return;}const prev=await stGet(SCAN_KEY,[]);const have=new Set(prev.map(x=>x.title));const fresh=t.filter(x=>!have.has(x.title));if(!fresh.length){setPhase("empty");return;}setSuggs(fresh);setDism(new Set());setPhase("review");}catch{setPhase("error");}};const active=suggs.filter((_,i)=>!dism.has(i));const dismiss=i=>setDism(p=>new Set([...p,i]));const undismiss=i=>setDism(p=>{const n=new Set(p);n.delete(i);return n;});return(<div style={{position:"fixed",inset:0,background:"#060a12f8",backdropFilter:"blur(14px)",zIndex:1500,display:"flex",flexDirection:"column"}}><div style={{background:"#0a0f1c",borderBottom:"1px solid #1e2d4a",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}><div><div style={{fontSize:8,color:"#3B82F6",letterSpacing:2.5,textTransform:"uppercase",marginBottom:2}}>Inbox + Sent ÃÂ· 48hrs</div><div style={{fontSize:17,fontWeight:900}}>Ã°ÂÂÂ§ Email Scan</div></div><button onClick={onClose} style={{padding:"6px 14px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#64748B",fontSize:12,cursor:"pointer"}}>Ã¢ÂÂ Close</button></div><div style={{flex:1,overflowY:"auto",padding:"22px 16px 80px"}}>{phase==="idle"&&<div style={{textAlign:"center",paddingTop:44}}><div style={{fontSize:52,marginBottom:16}}>Ã°ÂÂÂ¬</div><div style={{fontSize:15,fontWeight:800,marginBottom:10}}>Ready to Scan</div><div style={{fontSize:11,color:"#475569",lineHeight:1.8,marginBottom:32,maxWidth:250,margin:"0 auto 32px"}}>Reads Inbox + Sent last 48hrs. Excludes bid emails Ã¢ÂÂ those go to the Estimating Calendar.</div><button onClick={run} style={{padding:"13px 30px",borderRadius:10,background:"#3B82F6",border:"none",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:900}}>Scan Now Ã¢ÂÂ</button></div>}{phase==="scanning"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,display:"inline-block",marginBottom:18,animation:"spin 2s linear infinite"}}>Ã°ÂÂÂ</div><div style={{fontSize:13,fontWeight:700,marginBottom:7}}>Scanning...</div><div style={{fontSize:11,color:"#3B82F6"}}>{prog}</div></div>}{phase==="empty"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,marginBottom:14}}>Ã¢ÂÂ¨</div><div style={{fontSize:15,fontWeight:700,marginBottom:7}}>All clear</div><div style={{fontSize:11,color:"#475569",marginBottom:28}}>No new actionable emails found.</div><button onClick={run} style={{padding:"11px 22px",borderRadius:8,background:"#131e30",border:"1px solid #1e2d4a",color:"#94A3B8",fontSize:12,cursor:"pointer"}}>Scan Again</button></div>}{phase==="error"&&<div style={{textAlign:"center",paddingTop:56}}><div style={{fontSize:44,marginBottom:14}}>Ã¢ÂÂ Ã¯Â¸Â</div><div style={{fontSize:13,fontWeight:700,color:"#EF4444",marginBottom:22}}>Scan Failed</div><button onClick={run} style={{padding:"11px 22px",borderRadius:8,background:"#3B82F6",border:"none",color:"#fff",fontSize:12,cursor:"pointer",fontWeight:700}}>Try Again</button></div>}{phase==="review"&&<><div style={{marginBottom:16,padding:"11px 13px",borderRadius:10,background:"#0d1628",border:"1px solid #3B82F644"}}><div style={{fontSize:13,fontWeight:800,marginBottom:3}}>{active.length} suggested task{active.length!==1?"s":""}</div><div style={{fontSize:10,color:"#475569"}}>Tap <span style={{color:"#10B981",fontWeight:700}}>Add</span> ÃÂ· <span style={{color:"#EF4444",fontWeight:700}}>Skip</span> to dismiss</div></div>{suggs.map((s,i)=>{const isDismissed=dism.has(i);const dom=DOMAIN[s.domain]||DOMAIN.Business;return(<div key={i} style={{marginBottom:10,opacity:isDismissed?0.3:1,transition:"opacity 0.2s"}}><div style={{background:"#0c1220",border:`1px solid ${isDismissed?"#1e2d4a":dom.accent+"55"}`,borderLeft:`3px solid ${isDismissed?"#374151":dom.accent}`,borderRadius:10,padding:"12px 12px 10px"}}><div style={{display:"flex",gap:5,marginBottom:7}}><span style={{fontSize:8,color:"#3B82F6",background:"#1e3a5f44",border:"1px solid #3B82F633",borderRadius:4,padding:"2px 7px",maxWidth:180,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Ã°ÂÂÂ§ {s.emailFrom}</span>{s.emailDate&&<span style={{fontSize:7,color:"#374151"}}>{s.emailDate}</span>}</div>{s.emailSubject&&<div style={{fontSize:8,color:"#374151",marginBottom:7,fontStyle:"italic",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>"{s.emailSubject}"</div>}<div style={{fontSize:13,fontWeight:700,color:"#F1F5F9",marginBottom:3,lineHeight:1.3}}>{s.icon} {s.title}</div><div style={{fontSize:10,color:"#64748B",marginBottom:5,lineHeight:1.4}}>{s.subtitle}</div><div style={{fontSize:10,color:"#10B981",marginBottom:9}}>Ã¢ÂÂ {s.nextAction}</div><div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:9}}><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:dom.dim,color:dom.label}}>{s.domain}</span><span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#475569"}}>Ã¢ÂÂ± {s.deadline}</span>{s.owner!=="David"&&<span style={{fontSize:7,padding:"2px 5px",borderRadius:3,background:"#11182799",color:"#6B7280"}}>Ã°ÂÂÂ¤ {s.owner}</span>}</div>{!isDismissed?<div style={{display:"flex",gap:7}}><button onClick={()=>{dismiss(i);onAddTasks([s]);}} style={{flex:2,padding:"9px",borderRadius:7,background:"#052e16bb",border:"1px solid #10B98166",color:"#10B981",fontSize:12,cursor:"pointer",fontWeight:800}}>Ã¢ÂÂ Add</button><button onClick={()=>dismiss(i)} style={{flex:1,padding:"9px",borderRadius:7,background:"#45090a55",border:"1px solid #EF444444",color:"#EF4444",fontSize:12,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ</button></div>:<div style={{textAlign:"center",fontSize:10,color:"#374151"}}>Skipped ÃÂ· <span onClick={()=>undismiss(i)} style={{color:"#3B82F6",cursor:"pointer"}}>Undo</span></div>}</div></div>);})}
+{active.length>1&&<div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #1e2d4a"}}><button onClick={()=>{stSet(SCAN_KEY,suggs);onAddTasks(active);}} style={{width:"100%",padding:"13px",borderRadius:10,background:"#3B82F6",border:"none",color:"#fff",fontSize:14,cursor:"pointer",fontWeight:900}}>Ã¢ÂÂ Add All {active.length}</button></div>}<div style={{textAlign:"center",marginTop:12}}><button onClick={run} style={{background:"transparent",border:"none",color:"#475569",fontSize:10,cursor:"pointer"}}>Ã¢ÂÂ³ Rescan</button></div></>}</div></div>);}
 
-function Briefing({tasks,calEvents,stepsLog,onLogSteps,onClose}){const[steps,setSteps]=useState("");const logged=stepsLog[TODAY_DATE];const[didLog,setDidLog]=useState(false);const top3=tasks.filter(t=>t.day==="MON"&&t.status!=="DONE").slice(0,3);const meetings=calEvents.filter(e=>calDayKey(e.start)==="MON"&&!e.isCancelled).sort((a,b)=>new Date(a.start)-new Date(b.start));const waiting=tasks.filter(t=>!["David","Claude","Assign â"].includes(t.owner)&&t.status!=="DONE");const stepCount=logged??(didLog?parseInt(steps)||null:null);const log=()=>{if(!steps)return;onLogSteps(TODAY_DATE,parseInt(steps));setDidLog(true);};return(<div style={{position:"fixed",inset:0,background:"#060a12f8",backdropFilter:"blur(16px)",zIndex:1000,overflowY:"auto",padding:"22px 18px 40px"}}><div style={{maxWidth:480,margin:"0 auto"}}><div style={{marginBottom:22}}><div style={{fontSize:8,letterSpacing:2.5,color:"#3B82F6",textTransform:"uppercase",marginBottom:5}}>{TODAY_DATE} Â· Morning Briefing</div><div style={{fontSize:30,fontWeight:900,letterSpacing:-1,lineHeight:1.1}}>Good morning,<br/><span style={{color:"#3B82F6"}}>David.</span></div></div>{meetings.length>0&&<div style={{marginBottom:18}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>ð Today's Meetings ({meetings.length})</div><div style={{display:"flex",flexDirection:"column",gap:5}}>{meetings.map((ev,i)=><CalChip key={i} ev={ev}/>)}</div></div>}<div style={{marginBottom:18}}><div style={{fontSize:8,color:"#374151",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>ð¯ Top {top3.length} Today</div>{top3.length===0&&<div style={{fontSize:11,color:"#374151",fontStyle:"italic"}}>Nothing on board today.</div>}{top3.map((t,i)=>(<div key={t.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 0",borderBottom:i<top3.length-1?"1px solid #1e2d4a":"none"}}><div style={{width:24,height:24,borderRadius:"50%",background:i===0?"#EF4444":i===1?"#F59E0B":"#1e2d4a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>{i+1}</div><div><div style={{fontSize:13,fontWeight:700}}>{t.icon} {t.title}</div><div style={{fontSize:10,color:"#10B981",marginTop:2}}>â {t.nextAction}</div></div></div>))}</div>{waiting.length>0&&<div style={{background:"#1c100322",border:"1px solid #F59E0B33",borderRadius:10,padding:"9px 12px",marginBottom:14}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>ð¤ {waiting.length} Waiting on Others</div>{waiting.slice(0,3).map(t=><div key={t.id} style={{fontSize:10,color:"#FCD34D",marginTop:2}}>Â· {t.title} â {t.owner}</div>)}</div>}<div style={{background:"#0a0f1a",border:"1px solid #1e2d4a",borderRadius:10,padding:13,marginBottom:22}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>ð Yesterday's Steps</div>{stepCount!=null?<div style={{display:"flex",alignItems:"baseline",gap:10}}><span style={{fontSize:30,fontWeight:900,color:stepCount>=10000?"#10B981":stepCount>=5000?"#F59E0B":"#EF4444"}}>{stepCount.toLocaleString()}</span><span style={{fontSize:11,color:"#475569"}}>{stepCount>=10000?"â Goal hit!":stepCount>=5000?"Halfway.":"Way under."}</span></div>:<div style={{display:"flex",gap:9}}><input type="number" value={steps} onChange={e=>setSteps(e.target.value)} onKeyDown={e=>e.key==="Enter"&&log()} placeholder="Enter steps..." style={{flex:1,background:"#111827",border:"1px solid #1e2d4a",borderRadius:7,padding:"9px 11px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit"}}/><button onClick={log} style={{padding:"9px 16px",borderRadius:7,background:"#F59E0B",border:"none",color:"#000",fontSize:12,cursor:"pointer",fontWeight:800}}>LOG</button></div>}</div><button onClick={onClose} style={{width:"100%",background:"#3B82F6",border:"none",color:"#fff",padding:"15px",borderRadius:10,fontSize:14,cursor:"pointer",fontWeight:900}}>Let's go â</button></div></div>);}
+function Briefing({tasks,calEvents,stepsLog,onLogSteps,onClose}){const[steps,setSteps]=useState("");const logged=stepsLog[TODAY_DATE];const[didLog,setDidLog]=useState(false);const top3=tasks.filter(t=>t.day==="MON"&&t.status!=="DONE").slice(0,3);const meetings=calEvents.filter(e=>calDayKey(e.start)==="MON"&&!e.isCancelled).sort((a,b)=>new Date(a.start)-new Date(b.start));const waiting=tasks.filter(t=>!["David","Claude","Assign Ã¢ÂÂ"].includes(t.owner)&&t.status!=="DONE");const stepCount=logged??(didLog?parseInt(steps)||null:null);const log=()=>{if(!steps)return;onLogSteps(TODAY_DATE,parseInt(steps));setDidLog(true);};return(<div style={{position:"fixed",inset:0,background:"#060a12f8",backdropFilter:"blur(16px)",zIndex:1000,overflowY:"auto",padding:"22px 18px 40px"}}><div style={{maxWidth:480,margin:"0 auto"}}><div style={{marginBottom:22}}><div style={{fontSize:8,letterSpacing:2.5,color:"#3B82F6",textTransform:"uppercase",marginBottom:5}}>{TODAY_DATE} ÃÂ· Morning Briefing</div><div style={{fontSize:30,fontWeight:900,letterSpacing:-1,lineHeight:1.1}}>Good morning,<br/><span style={{color:"#3B82F6"}}>David.</span></div></div>{meetings.length>0&&<div style={{marginBottom:18}}><div style={{fontSize:8,color:"#3B82F6",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>Ã°ÂÂÂ Today's Meetings ({meetings.length})</div><div style={{display:"flex",flexDirection:"column",gap:5}}>{meetings.map((ev,i)=><CalChip key={i} ev={ev}/>)}</div></div>}<div style={{marginBottom:18}}><div style={{fontSize:8,color:"#374151",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>Ã°ÂÂÂ¯ Top {top3.length} Today</div>{top3.length===0&&<div style={{fontSize:11,color:"#374151",fontStyle:"italic"}}>Nothing on board today.</div>}{top3.map((t,i)=>(<div key={t.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"9px 0",borderBottom:i<top3.length-1?"1px solid #1e2d4a":"none"}}><div style={{width:24,height:24,borderRadius:"50%",background:i===0?"#EF4444":i===1?"#F59E0B":"#1e2d4a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>{i+1}</div><div><div style={{fontSize:13,fontWeight:700}}>{t.icon} {t.title}</div><div style={{fontSize:10,color:"#10B981",marginTop:2}}>Ã¢ÂÂ {t.nextAction}</div></div></div>))}</div>{waiting.length>0&&<div style={{background:"#1c100322",border:"1px solid #F59E0B33",borderRadius:10,padding:"9px 12px",marginBottom:14}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:3}}>Ã°ÂÂÂ¤ {waiting.length} Waiting on Others</div>{waiting.slice(0,3).map(t=><div key={t.id} style={{fontSize:10,color:"#FCD34D",marginTop:2}}>ÃÂ· {t.title} Ã¢ÂÂ {t.owner}</div>)}</div>}<div style={{background:"#0a0f1a",border:"1px solid #1e2d4a",borderRadius:10,padding:13,marginBottom:22}}><div style={{fontSize:8,color:"#F59E0B",letterSpacing:1.5,textTransform:"uppercase",marginBottom:9}}>Ã°ÂÂÂ Yesterday's Steps</div>{stepCount!=null?<div style={{display:"flex",alignItems:"baseline",gap:10}}><span style={{fontSize:30,fontWeight:900,color:stepCount>=10000?"#10B981":stepCount>=5000?"#F59E0B":"#EF4444"}}>{stepCount.toLocaleString()}</span><span style={{fontSize:11,color:"#475569"}}>{stepCount>=10000?"Ã¢ÂÂ Goal hit!":stepCount>=5000?"Halfway.":"Way under."}</span></div>:<div style={{display:"flex",gap:9}}><input type="number" value={steps} onChange={e=>setSteps(e.target.value)} onKeyDown={e=>e.key==="Enter"&&log()} placeholder="Enter steps..." style={{flex:1,background:"#111827",border:"1px solid #1e2d4a",borderRadius:7,padding:"9px 11px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit"}}/><button onClick={log} style={{padding:"9px 16px",borderRadius:7,background:"#F59E0B",border:"none",color:"#000",fontSize:12,cursor:"pointer",fontWeight:800}}>LOG</button></div>}</div><button onClick={onClose} style={{width:"100%",background:"#3B82F6",border:"none",color:"#fff",padding:"15px",borderRadius:10,fontSize:14,cursor:"pointer",fontWeight:900}}>Let's go Ã¢ÂÂ</button></div></div>);}
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 // ROOT APP
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 export default function App() {
   const [tasks,         setTasks]         = useState(SEED_TASKS);
   const [bids,          setBids]          = useState(SEED_BIDS);
@@ -783,7 +792,7 @@ export default function App() {
 
   useEffect(()=>{
     (async()=>{
-      // 1. Load tasks â Firebase is source of truth, local storage is fallback
+      // 1. Load tasks Ã¢ÂÂ Firebase is source of truth, local storage is fallback
       const fbTasks = await fbFetchTasks();
       if (fbTasks && fbTasks.length > 0) {
         setTasks(fbTasks);
@@ -827,7 +836,7 @@ export default function App() {
     setCalLoading(false);
   };
   const addBids = newBids => {
-    setBids(p=>[...p,...newBids.map(b=>({...b,id:"bid-"+Date.now()+Math.random()*999|0,status:b.status||"NEW",assignedTo:b.assignedTo||"Assign â",notes:b.notes||""}))]);
+    setBids(p=>[...p,...newBids.map(b=>({...b,id:"bid-"+Date.now()+Math.random()*999|0,status:b.status||"NEW",assignedTo:b.assignedTo||"Assign Ã¢ÂÂ",notes:b.notes||""}))]);
   };
   const updateBid = updated => setBids(p=>p.map(b=>b.id===updated.id?updated:b));
 
@@ -851,7 +860,7 @@ export default function App() {
   if (!loaded) return (
     <div style={{background:"#060a12",height:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{textAlign:"center"}}>
-        <div style={{fontSize:28,marginBottom:12}}>ð</div>
+        <div style={{fontSize:28,marginBottom:12}}>Ã°ÂÂÂ</div>
         <div style={{fontSize:10,color:"#1e2d4a",letterSpacing:3}}>LOADING...</div>
       </div>
     </div>
@@ -865,25 +874,25 @@ export default function App() {
       {showEmailScan && <EmailScanModal onAddTasks={addTasks} onClose={()=>setShowEmailScan(false)}/>}
       {schedulingId  && <ScheduleModal taskId={schedulingId} tasks={tasks} onSchedule={scheduleTask} onClose={()=>setSchedulingId(null)}/>}
 
-      {/* ââ TOP NAV ââ */}
+      {/* Ã¢ÂÂÃ¢ÂÂ TOP NAV Ã¢ÂÂÃ¢ÂÂ */}
       <div style={{background:"#080d18",borderBottom:"1px solid #1e2d4a",padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
         <div>
-          <div style={{fontSize:7,letterSpacing:2.5,color:"#3B82F6",textTransform:"uppercase"}}>Coastal Plumbing Â· SWFL</div>
+          <div style={{fontSize:7,letterSpacing:2.5,color:"#3B82F6",textTransform:"uppercase"}}>Coastal Plumbing ÃÂ· SWFL</div>
           <div style={{fontSize:15,fontWeight:900,letterSpacing:-0.5}}>OPS CENTER</div>
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center"}}>
-          <div style={{fontSize:8,color:calLoading?"#F59E0B":calEvents.length>0?"#10B981":"#EF4444"}}>{calLoading?"â³":calEvents.length>0?`ð${calEvents.length}`:"ð0"}</div>
+          <div style={{fontSize:8,color:calLoading?"#F59E0B":calEvents.length>0?"#10B981":"#EF4444"}}>{calLoading?"Ã¢ÂÂ³":calEvents.length>0?`Ã°ÂÂÂ${calEvents.length}`:"Ã°ÂÂÂ0"}</div>
           <div onClick={refreshFromFirebase} title="Firebase sync" style={{fontSize:8,cursor:"pointer",color:fbStatus==="synced"?"#10B981":fbStatus==="syncing"?"#F59E0B":"#EF4444",background:fbStatus==="synced"?"#052e1644":fbStatus==="syncing"?"#1c100344":"#45090a44",border:`1px solid ${fbStatus==="synced"?"#10B98133":fbStatus==="syncing"?"#F59E0B33":"#EF444433"}`,borderRadius:4,padding:"2px 6px",fontWeight:700}}>
-            {fbStatus==="synced"?"ð¥ LIVE":fbStatus==="syncing"?"â³ SYNCâ¦":"â  FB ERR"}
+            {fbStatus==="synced"?"Ã°ÂÂÂ¥ LIVE":fbStatus==="syncing"?"Ã¢ÂÂ³ SYNCÃ¢ÂÂ¦":"Ã¢ÂÂ  FB ERR"}
           </div>
-          <button onClick={refreshCal} style={{padding:"4px 7px",borderRadius:5,background:"#111827",border:"1px solid #1e2d4a",color:"#475569",fontSize:10,cursor:"pointer"}}>â³</button>
-          <button onClick={()=>setShowBriefing(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d2818",border:"1px solid #10B98133",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>â</button>
-          {tab!=="bids"&&<button onClick={()=>setShowEmailScan(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d1628",border:"1px solid #3B82F644",color:"#93C5FD",fontSize:9,cursor:"pointer",fontWeight:700}}>ð§</button>}
+          <button onClick={refreshCal} style={{padding:"4px 7px",borderRadius:5,background:"#111827",border:"1px solid #1e2d4a",color:"#475569",fontSize:10,cursor:"pointer"}}>Ã¢ÂÂ³</button>
+          <button onClick={()=>setShowBriefing(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d2818",border:"1px solid #10B98133",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>Ã¢ÂÂ</button>
+          {tab!=="bids"&&<button onClick={()=>setShowEmailScan(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d1628",border:"1px solid #3B82F644",color:"#93C5FD",fontSize:9,cursor:"pointer",fontWeight:700}}>Ã°ÂÂÂ§</button>}
           <button onClick={()=>setShowAddModal(true)} style={{padding:"5px 11px",borderRadius:5,background:"#3B82F6",border:"none",color:"#fff",fontSize:11,cursor:"pointer",fontWeight:800}}>+</button>
         </div>
       </div>
 
-      {/* Stats bar â hide on bids tab (has its own) */}
+      {/* Stats bar Ã¢ÂÂ hide on bids tab (has its own) */}
       {tab!=="bids"&&(
         <div style={{background:"#080d18",borderBottom:"1px solid #1e2d4a",padding:"5px 14px",display:"flex",gap:14,alignItems:"center",flexShrink:0}}>
           {[
@@ -900,10 +909,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Quick Capture â hide on bids tab */}
+      {/* Quick Capture Ã¢ÂÂ hide on bids tab */}
       {tab!=="bids"&&<QuickCapture onAdd={addTask}/>}
 
-      {/* Week strip â today only */}
+      {/* Week strip Ã¢ÂÂ today only */}
       {tab==="today"&&<WeekStrip activeDayIdx={activeDayIdx} tasks={tasks} calEvents={calEvents} onSelect={i=>setActiveDayIdx(i)}/>}
 
       {/* Content */}
@@ -917,10 +926,10 @@ export default function App() {
       {/* Bottom nav */}
       <div style={{background:"#080d18",borderTop:"1px solid #1e2d4a",display:"flex",padding:"7px 0 env(safe-area-inset-bottom,7px)",flexShrink:0}}>
         {[
-          {id:"today",      icon:"ð", label:"Today"},
-          {id:"queue",      icon:"â¡", label:"Queue",  badge:unscheduled.length},
-          {id:"bids",       icon:"ðï¸", label:"Bids",   badge:urgentBids.length, badgeColor:"#F59E0B", badgeText:"#000"},
-          {id:"delegation", icon:"ð¤", label:"Team",   badge:delegated.length},
+          {id:"today",      icon:"Ã°ÂÂÂ", label:"Today"},
+          {id:"queue",      icon:"Ã¢ÂÂ¡", label:"Queue",  badge:unscheduled.length},
+          {id:"bids",       icon:"Ã°ÂÂÂÃ¯Â¸Â", label:"Bids",   badge:urgentBids.length, badgeColor:"#F59E0B", badgeText:"#000"},
+          {id:"delegation", icon:"Ã°ÂÂÂ¤", label:"Team",   badge:delegated.length},
         ].map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)}
             style={{flex:1,background:"transparent",border:"none",cursor:"pointer",padding:"5px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:1,position:"relative"}}>
