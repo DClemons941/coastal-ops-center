@@ -1,11 +1,4 @@
-if (typeof window !== 'undefined' && !window.storage) {
-  window.storage = {
-    get: async (k) => { try { const v = localStorage.getItem(k); return v ? { key: k, value: v } : null; } catch { return null; } },
-    set: async (k, v) => { try { localStorage.setItem(k, String(v)); return { key: k, value: v }; } catch { return null; } },
-    delete: async (k) => { try { localStorage.removeItem(k); return { key: k, deleted: true }; } catch { return null; } },
-    list: async (prefix) => { try { const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix)); return { keys }; } catch { return { keys: [] }; } }
-  };
-}import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -135,64 +128,8 @@ const CAL_KEY     = "coastal-cal-v2";
 const BIDS_KEY    = "coastal-bids-v3";
 const SCAN_KEY    = "coastal-scan-v2";
 
-const FIREBASE_URL = "https://coastal---ops-default-rtdb.firebaseio.com";
-
-async function stGet(k,fb){try{const r=await window.storage.get(k);if(r?.value)return JSON.parse(r.value);}catch{}return fb;}
-async function stSet(k,v){try{await window.storage.set(k,JSON.stringify(v));}catch{}}
-
-// Map Firebase task format → app task format
-function mapFirebaseTask(t) {
-  const iconMap = {Business:"📌",Personal:"🔹",Family:"💙",Health:"💪"};
-  return {
-    id:         t.id || String(Date.now() + Math.random()),
-    icon:       iconMap[t.domain] || "📌",
-    title:      t.text || "(untitled)",
-    subtitle:   t.mins ? `~${t.mins} min` : "",
-    domain:     t.domain || "Business",
-    priority:   t.urgent ? 1 : 5,
-    status:     t.status || "QUEUED",
-    owner:      t.owner || "David",
-    deadline:   t.urgent ? "ASAP" : "TBD",
-    day:        null,
-    progress:   t.status === "DONE" ? 100 : 0,
-    nextAction: "",
-    dateAdded:  t.createdAt || TODAY_ISO,
-  };
-}
-
-// Fetch tasks from Firebase
-async function fbFetchTasks() {
-  try {
-    const res = await fetch(`${FIREBASE_URL}/tasks.json`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || !Array.isArray(data)) return null;
-    return data.map(mapFirebaseTask);
-  } catch { return null; }
-}
-
-// Write full tasks array back to Firebase
-async function fbWriteTasks(tasks) {
-  try {
-    // Convert back to Firebase format preserving original fields where possible
-    const fbTasks = tasks.map(t => ({
-      id:           t.id,
-      text:         t.title,
-      domain:       t.domain,
-      status:       t.status,
-      owner:        t.owner,
-      urgent:       t.priority <= 2,
-      mins:         0,
-      createdAt:    t.dateAdded || TODAY_ISO,
-      ...(t.status === "DONE" ? { completedAt: new Date().toISOString(), completedToday: true } : {}),
-    }));
-    await fetch(`${FIREBASE_URL}/tasks.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fbTasks),
-    });
-  } catch { /* silent fail — local state is still intact */ }
-}
+function stGet(k,fb){try{const v=localStorage.getItem(k);if(v)return JSON.parse(v);}catch{}return fb;}
+function stSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILS
@@ -790,31 +727,22 @@ export default function App() {
 
   useEffect(()=>{
     (async()=>{
-      // 1. Load tasks — Firebase is source of truth, local storage is fallback
-      const fbTasks = await fbFetchTasks();
-      if (fbTasks && fbTasks.length > 0) {
-        setTasks(fbTasks);
-      } else {
-        const localTasks = await stGet(STORAGE_KEY, null);
-        if (localTasks) setTasks(localTasks);
-        // else SEED_TASKS stay as fallback
-      }
-
-      const b = await stGet(BIDS_KEY, null);    if (b) setBids(b);
-      const s = await stGet(STEPS_KEY, {});     setStepsLog(s);
-      const cached = await stGet(CAL_KEY, null);
+      const t = stGet(STORAGE_KEY, null); if (t) setTasks(t);
+      const b = stGet(BIDS_KEY, null);    if (b) setBids(b);
+      const s = stGet(STEPS_KEY, {});     setStepsLog(s);
+      const cached = stGet(CAL_KEY, null);
       if (cached?.events && cached.ts > Date.now()-15*60*1000) {
         setCalEvents(cached.events); setCalLoading(false);
       } else {
         const evs = await fetchCalendarEvents();
-        if (evs.length>0){ setCalEvents(evs); await stSet(CAL_KEY,{events:evs,ts:Date.now()}); }
+        if (evs.length>0){ setCalEvents(evs); stSet(CAL_KEY,{events:evs,ts:Date.now()}); }
         setCalLoading(false);
       }
       setLoaded(true);
     })();
   },[]);
 
-  useEffect(()=>{ if (loaded) { stSet(STORAGE_KEY, tasks); fbWriteTasks(tasks); } }, [tasks, loaded]);
+  useEffect(()=>{ if (loaded) stSet(STORAGE_KEY, tasks); }, [tasks, loaded]);
   useEffect(()=>{ if (loaded) stSet(BIDS_KEY, bids);  }, [bids,  loaded]);
 
   const update       = (id, patch) => setTasks(p=>p.map(t=>t.id===id?{...t,...patch}:t));
@@ -826,11 +754,11 @@ export default function App() {
   const markDone     = id => update(id,{status:"DONE",day:null});
   const unschedule   = id => update(id,{day:null});
   const scheduleTask = (tid,day) => { update(tid,{day}); setSchedulingId(null); };
-  const logSteps     = async (date,val) => { const n={...stepsLog,[date]:val}; setStepsLog(n); await stSet(STEPS_KEY,n); };
+  const logSteps     = async (date,val) => { const n={...stepsLog,[date]:val}; setStepsLog(n); stSet(STEPS_KEY,n); };
   const refreshCal   = async () => {
     setCalLoading(true);
     const evs = await fetchCalendarEvents();
-    if (evs.length>0){ setCalEvents(evs); await stSet(CAL_KEY,{events:evs,ts:Date.now()}); }
+    if (evs.length>0){ setCalEvents(evs); stSet(CAL_KEY,{events:evs,ts:Date.now()}); }
     setCalLoading(false);
   };
   const addBids = newBids => {
@@ -838,19 +766,7 @@ export default function App() {
   };
   const updateBid = updated => setBids(p=>p.map(b=>b.id===updated.id?updated:b));
 
-  const [fbStatus, setFbStatus] = useState("synced"); // "synced" | "syncing" | "error"
-
-  const refreshFromFirebase = async () => {
-    setFbStatus("syncing");
-    const fbTasks = await fbFetchTasks();
-    if (fbTasks && fbTasks.length > 0) {
-      setTasks(fbTasks);
-      setFbStatus("synced");
-    } else {
-      setFbStatus("error");
-      setTimeout(() => setFbStatus("synced"), 3000);
-    }
-  };
+  const delegated   = tasks.filter(t=>!["David","Assign →"].includes(t.owner)&&t.status!=="DONE");
   const unscheduled = tasks.filter(t=>!t.day&&t.status!=="DONE");
   const activeBids  = bids.filter(b=>!["WON","LOST","DECLINED"].includes(b.status));
   const urgentBids  = activeBids.filter(b=>{const d=daysUntil(b.bidDue);return d!==null&&d<=7;});
@@ -880,9 +796,6 @@ export default function App() {
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center"}}>
           <div style={{fontSize:8,color:calLoading?"#F59E0B":calEvents.length>0?"#10B981":"#EF4444"}}>{calLoading?"⏳":calEvents.length>0?`📅${calEvents.length}`:"📅0"}</div>
-          <div onClick={refreshFromFirebase} title="Firebase sync" style={{fontSize:8,cursor:"pointer",color:fbStatus==="synced"?"#10B981":fbStatus==="syncing"?"#F59E0B":"#EF4444",background:fbStatus==="synced"?"#052e1644":fbStatus==="syncing"?"#1c100344":"#45090a44",border:`1px solid ${fbStatus==="synced"?"#10B98133":fbStatus==="syncing"?"#F59E0B33":"#EF444433"}`,borderRadius:4,padding:"2px 6px",fontWeight:700}}>
-            {fbStatus==="synced"?"🔥 LIVE":fbStatus==="syncing"?"⏳ SYNC…":"⚠ FB ERR"}
-          </div>
           <button onClick={refreshCal} style={{padding:"4px 7px",borderRadius:5,background:"#111827",border:"1px solid #1e2d4a",color:"#475569",fontSize:10,cursor:"pointer"}}>⟳</button>
           <button onClick={()=>setShowBriefing(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d2818",border:"1px solid #10B98133",color:"#10B981",fontSize:10,cursor:"pointer",fontWeight:700}}>☀</button>
           {tab!=="bids"&&<button onClick={()=>setShowEmailScan(true)} style={{padding:"5px 9px",borderRadius:5,background:"#0d1628",border:"1px solid #3B82F644",color:"#93C5FD",fontSize:9,cursor:"pointer",fontWeight:700}}>📧</button>}
